@@ -39,16 +39,21 @@
       "title": "A ladder of rewards: standard → weak → spurious",
       "bullets": [
         "**Ground truth:** reward verifiably correct answers (supervision upper bound)",
-        "**Majority vote** (weak): pseudo-label each prompt by majority of 64 pre-RL rollouts",
+        "**Majority vote** (weak): the pre-RL model answers each prompt **64 times**",
+        {
+          "text": "Most common final answer becomes the label, fixed offline and never refreshed",
+          "level": 1
+        },
         "**Format** (weak): reward any non-empty \\boxed{}, ignoring correctness entirely",
         "**Random** (spurious): reward 1 with probability γ = 0.5, independent of the response",
-        "**Incorrect** (spurious): reward only the majority-voted wrong answer per prompt",
+        "**Incorrect** (spurious): same vote, but keep only prompts where the label is **wrong**",
         {
-          "text": "Everything else (data, model, GRPO hyperparameters) is held constant",
+          "text": "Reward that one specific wrong answer, so reward sparsity stays comparable",
           "level": 1
-        }
+        },
+        "**Held constant** across all five: data, model and every GRPO hyperparameter"
       ],
-      "notes": "The design is a controlled ablation of reward information. Majority vote removes the labels; format removes correctness; random removes all information; incorrect makes the information negative. Incorrect rewards are deliberately majority-voted wrong answers rather than arbitrary wrong answers, so reward sparsity stays comparable and the labels remain high-probability model outputs. Appendix B shows gamma in {0.001, 0.3, 0.7} behaves similarly, and gamma = 0 gives zero gradients as expected."
+      "notes": "The design is a controlled ablation of reward information. Majority vote removes the labels; format removes correctness; random removes all information; incorrect makes the information negative. Worth saying the voting out loud, because two details matter. First, the 64 rollouts come from the model *before* any RLVR, and the winning answer is frozen as that prompt's label for the entire run. That is exactly what separates this from TTRL, which re-votes with the online policy as training proceeds (Appendix A.7), so the two sets of numbers are not directly comparable. Second, for incorrect rewards the same vote runs first, then only the prompts whose winning answer is actually wrong are kept, and the model is rewarded for reproducing precisely that wrong answer. Rewarding one specific wrong answer rather than any wrong answer keeps reward sparsity comparable to the other conditions, and it keeps the target a high-probability model output. That is the whole point of the design: it disentangles 'majority vote works because the labels are usually right' from 'majority vote works because the labels are what the model already tends to say'. Appendix B shows gamma in {0.001, 0.3, 0.7} behaves similarly, and gamma = 0 gives zero gradients as expected."
     },
     {
       "layout": "bullets",
@@ -56,12 +61,13 @@
       "title": "GRPO on DeepScaleR, evaluated on standard math benchmarks",
       "bullets": [
         "**Algorithm:** GRPO with binary 0/1 rewards; KL and entropy losses disabled (λ = 0)",
-        "**Training data:** DeepScaleR; **10 models** across Qwen2.5, Llama3, OLMo2 families",
+        "**Training data:** DeepScaleR (~40K competition math problems, verifiable answers)",
+        "**Models:** 10 across the Qwen2.5, Llama3 and OLMo2 families",
         "**Benchmarks:** MATH-500 (pass@1), AMC and AIME 2024/2025 (avg@8)",
         "**Hyperparameters:** lr 5e-7, mini-batch 128, rollout batch 64, 16 rollouts/prompt, τ = 1",
         "**Compute:** ~24 h on 8×A100 per RLVR run; curves reported to 300 steps"
       ],
-      "notes": "Decoding uses temperature 0 for pass@1 and 0.6 for pass@k. Chat templates: Qwen2.5-Math default for Qwen and instruct models, the OLMo template for other base models. Appendix I documents that Qwen2.5-Math-7B is unusually sensitive to the evaluation prompt, since even a task-irrelevant 'spurious prompt' can give high initial accuracy, which is why the setup is held fixed across rewards."
+      "notes": "DeepScaleR (Luo et al., 2025) is the RL training set released with the DeepScaleR 1.5B project: roughly 40K unique problem and answer pairs pooled from AIME, AMC, Omni-MATH and STILL, all with short verifiable answers, which is what makes a 0/1 verifier reward possible. Note that composition comes from the DeepScaleR release rather than from this paper, which only cites the dataset. Decoding uses temperature 0 for pass@1 and 0.6 for pass@k. Chat templates: Qwen2.5-Math default for Qwen and instruct models, the OLMo template for other base models. Appendix I documents that Qwen2.5-Math-7B is unusually sensitive to the evaluation prompt, since even a task-irrelevant 'spurious prompt' can give high initial accuracy, which is why the setup is held fixed across rewards."
     },
     {
       "layout": "figure_bullets",
