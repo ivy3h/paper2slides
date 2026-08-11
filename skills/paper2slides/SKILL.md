@@ -20,7 +20,7 @@ Let `REPO` = this skill's repo root, `PY` = `$REPO/.venv/bin/python`, `W` = a fr
 → `W/content.md` (text), `W/pages/page-N.png` (page renders), `W/assets/figNN.png` (embedded figures), `W/figures.json`.
 
 ## 2. Choose figures
-Read `W/content.md`; skim `W/pages/*.png`. Pick the few highest-value figures/tables (architecture/pipeline diagram, main results table, a key plot). Embedded raster figures are already in `W/assets/`. For **vector** figures (diagrams that didn't extract), crop from a page render:
+Read `W/content.md`; skim `W/pages/*.png`. Pick the few highest-value figures/tables (architecture/pipeline diagram, main results table, a key plot). Embedded raster figures are already in `W/assets/`. Crop **key equations** the same way you crop figures: a numbered equation the talk leans on (a loss, an estimator, a gradient) is worth a slide of its own, and cropping keeps the paper's own typography instead of trying to retype maths in `python-pptx`. For **vector** figures (diagrams that didn't extract), crop from a page render:
 ```
 "$PY" "$REPO/scripts/crop.py" "$W/pages/page-3.png" 0.08 0.10 0.95 0.42 "$W/assets/fig_pipeline.png"
 ```

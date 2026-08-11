@@ -132,6 +132,21 @@
       "notes": "Precision matters here, because the intuitive story is wrong in three ways. (1) E[r] = gamma = 0.5, not 0. (2) E[advantage] = 0 holds by construction from group-centering, and it is just as true under ground-truth rewards, so it explains nothing on its own. (3) The expected gradient vanishes only because the advantage is independent of the rollout, so it factors out; under ground truth the same expression is nonzero through Cov(advantage, grad log pi), and that covariance IS the learning signal. Setup arithmetic: 64 prompts x 16 rollouts = 1024 rollouts per batch, mini-batch 128, so 8 inner updates per rollout batch; only from the second update does the ratio leave 1. Footnote 3 confirms the last two ablations force pi_theta = pi_old, making clipping inert by construction, but Figure 10's caption also admits they involve 8x fewer gradient updates, so they are not clean single-variable ablations. The implementation-level clip removal keeps 8 updates but has huge seed variance, and Appendix B.2 concedes some seeds still converge high. So 'no clipping means no signal' is weaker than the headline suggests."
     },
     {
+      "layout": "figure_bullets",
+      "kicker": "Mechanism · the objective",
+      "title": "Eq. 1: what GRPO actually maximises",
+      "figure": "eq1_grpo_objective",
+      "figure_height": 2.5,
+      "figure_caption": "Eq. 1, with the clipping term in red. The KL penalty is omitted because it is disabled in these experiments.",
+      "bullets": [
+        "**ρ (rho)** is the importance ratio: current policy probability over behavior policy",
+        "**Â** is the advantage, centred within each prompt, so it averages to zero by construction",
+        "The **min** picks whichever of the two products is smaller, which is PPO's pessimistic bound",
+        "Everything downstream comes from **when that min selects the clipped branch**"
+      ],
+      "notes": "Read the equation left to right before moving on. The expectation is over prompts and over rollouts from the behavior policy pi_old. Inside, for every generated token t, you compare two products: the raw ratio times the advantage, and the clipped ratio times the same advantage. The min takes whichever is smaller. That min is the whole mechanism: clip(rho) is the identity inside the band, so both arguments are equal there and theta still flows, while outside the band the clipped argument is a constant and its gradient is zero. Note two things the paper does here. The clipping term is printed in red in the original because it is the object of study. And footnote 2 says the KL regularisation term is omitted, since lambda is set to 0 in all their runs, which removes a confound from the analysis."
+    },
+    {
       "layout": "matrix",
       "kicker": "Mechanism · step 1",
       "title": "Clipping is a sign filter, not a source of signal",
@@ -209,6 +224,21 @@
         ]
       ],
       "notes": "Same 2x2 as the previous slide, now read in absolute probability space. The clip band is relative (plus or minus eps times pi_old) while probabilities are capped at 1, so the upper-clip cell becomes unreachable for any token whose behavior-policy probability exceeds 1/(1+eps), about 0.833 at eps = 0.2. For those tokens the expected-gradient set collapses from {-mu, 0, +mu} to {0, +mu}: never negative, sometimes positive, so it ratchets upward. Rare tokens keep the full set and lose on net. One honest correction if someone challenges it: the high-prior token is not permanently frozen, since it can still enter the below-band case if it drops under 0.68. The claim is only that its negative half is deleted. The effect is also self-reinforcing, since as pi_old rises the ceiling bites harder and softmax normalisation takes the mass from the suppressed tokens. Figure 9(a) is the receipt: average token probability climbs monotonically from 0.85 to about 0.98 with clipping and stays flat without it."
+    },
+    {
+      "layout": "figure_bullets",
+      "kicker": "Mechanism · the result",
+      "title": "Eq. 2: the expected gradient under random rewards",
+      "figure": "eq2_expected_gradient",
+      "figure_height": 2.35,
+      "figure_caption": "Eq. 2, with R = current over behavior policy probability for that token. Reward-independent scalars are factored out.",
+      "bullets": [
+        "Three branches: **below the band, inside it, above it**",
+        "Below pushes the token **up**, above pushes it **down**: a restoring force",
+        "Inside the band the expectation is **0**, because the two signs cancel",
+        "The reward **does not appear**: it integrated out, leaving only the ratio R"
+      ],
+      "notes": "This is the formal version of everything just derived, and the payoff line of Section 4. Read it as a restoring force: below the band you get pushed back up, above it you get pushed back down, and inside the band the positive and negative advantages cancel. On its own that is a stable equilibrium at pi_theta = pi_old, which is exactly why the previous slide's ceiling argument is needed to turn it into a drift. The striking part is what is absent. The reward does not appear anywhere in Eq. 2. It has been integrated out, leaving only R, which measures how far the current policy has moved from the behavior policy on that token. Appendix B derives this in full and labels it the clipping bias, defined as the difference between the expected gradient with clipping and without it, the latter being exactly zero under random rewards."
     },
     {
       "layout": "bullets",
