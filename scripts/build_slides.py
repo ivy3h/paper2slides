@@ -5,7 +5,7 @@ Usage: python build_slides.py deck.json medfact_slides.pptx [assets_dir]
 
 deck.json schema (see sample_deck.json):
 {
-  "meta": {title, subtitle, authors, affiliation, venue, presenter, date, short_title},
+  "meta": {title, subtitle, authors, affiliation, venue, presenter, date},
   "slides": [ { "layout": <type>, "title":..., "kicker":..., "number":...,
                 "bullets": [str | {"text":str,"level":0}], "columns": [[..],[..]],
                 "figure": "<manifest id or filename>", "figure_caption": str,
@@ -86,12 +86,13 @@ def add_para(tf, text, size, color, bold=False, italic=False, align=PP_ALIGN.LEF
     style_runs(p, text, size, color, bold, italic)
     return p
 
-def footer(slide, short_title, num, total):
-    rect(slide, 0, 7.18, 13.333, 0.022, GOLD)
-    tb, tf = textbox(slide, 0.55, 7.16, 8, 0.3)
-    add_para(tf, short_title, 10, MUTED, first=True)
-    tb2, tf2 = textbox(slide, 11.0, 7.16, 1.78, 0.3)
-    p = add_para(tf2, f"{num} / {total}", 10, MUTED, align=PP_ALIGN.RIGHT, first=True)
+RULE_Y = 7.18          # gold hairline above the footer
+FOOT_Y = RULE_Y + 0.08  # text sits clear of the rule (a 10pt line is ~0.17in tall)
+
+def footer(slide, num, total):
+    rect(slide, 0, RULE_Y, 13.333, 0.022, GOLD)
+    tb, tf = textbox(slide, 11.0, FOOT_Y, 1.78, 0.24)
+    add_para(tf, f"{num} / {total}", 10, MUTED, align=PP_ALIGN.RIGHT, first=True)
 
 def add_notes(slide, notes):
     if notes:
@@ -120,7 +121,9 @@ def add_figure(slide, path, cx, cy, box_w, box_h, caption=None, cap_h=0.45, cap_
     pic = slide.shapes.add_picture(path, Inches(left), Inches(top), Inches(w), Inches(h))
     pic.line.color.rgb = RGBColor(0xD7, 0xDE, 0xEA); pic.line.width = Pt(0.75)
     if caption:
-        tb, tf = textbox(slide, cx, cy + box_h - cap_h, box_w, cap_h)
+        # keep the caption attached to the image instead of pinned to the bottom of the box
+        cap_top = min(top + h + 0.06, cy + box_h - cap_h)
+        tb, tf = textbox(slide, cx, cap_top, box_w, cap_h)
         add_para(tf, caption, cap_size, MUTED, italic=True, align=PP_ALIGN.CENTER, first=True, line=1.05)
 
 def slide_title(slide, title, kicker=None):
@@ -131,6 +134,12 @@ def slide_title(slide, title, kicker=None):
     add_para(tf, title, 27, NAVY, bold=True, first=True, line=1.0)
     rect(slide, 0.57, 1.45 if kicker else 1.28, 1.6, 0.045, GOLD)
     return 1.75 if kicker else 1.58  # content top y
+
+def hanging(para, indent_in):
+    """Hanging indent: wrapped lines align under the text, not under the bullet glyph."""
+    pPr = para._p.get_or_add_pPr()
+    pPr.set("marL", str(int(Inches(indent_in))))
+    pPr.set("indent", str(-int(Inches(indent_in))))
 
 def bullets_block(slide, bullets, x, y, w, h, base_size=19):
     n = len(bullets)
@@ -147,10 +156,12 @@ def bullets_block(slide, bullets, x, y, w, h, base_size=19):
             p.space_after = Pt(7); p.space_before = Pt(2); p.line_spacing = 1.06
             r = p.add_run(); r.text = "▪  "; r.font.size = Pt(size); r.font.color.rgb = GOLD; r.font.bold = True; r.font.name = FONT
             style_runs(p, text, size, INK)
+            hanging(p, size / 68.0)  # ≈ width of "▪  " at this point size
         else:
             p = tf.add_paragraph(); p.space_after = Pt(4); p.line_spacing = 1.04
             r = p.add_run(); r.text = "        –  "; r.font.size = Pt(size-2); r.font.color.rgb = MUTED; r.font.name = FONT
             style_runs(p, text, size-2, INK)
+            hanging(p, (size - 2) / 26.0)  # ≈ width of the indented dash prefix
         first = False
     return tb
 
@@ -158,7 +169,6 @@ def build(deck, out_pptx, assets):
     prs = Presentation(); prs.slide_width = SW; prs.slide_height = SH
     blank = prs.slide_layouts[6]
     meta = deck.get("meta", {})
-    short = meta.get("short_title", "")
     slides = deck["slides"]
     total = len(slides)
 
@@ -217,6 +227,16 @@ def build(deck, out_pptx, assets):
         elif layout == "figure":
             add_figure(sl, figpath(s.get("figure")), 0.7, cy+0.0, 11.9, 5.05, s.get("figure_caption"))
 
+        elif layout == "figure_bullets":
+            # wide, short figures (tables / multi-panel strips) waste a full-slide `figure`:
+            # give them a full-width band on top and put the takeaways underneath.
+            fh = float(s.get("figure_height", 3.2))
+            add_figure(sl, figpath(s.get("figure")), 0.6, cy+0.0, 12.13, fh,
+                       s.get("figure_caption"), cap_h=0.32, cap_size=10.5)
+            rest = 5.05 - fh - 0.15
+            bullets_block(sl, s.get("bullets", []), 0.6, cy + fh + 0.15, 12.13, max(rest, 0.6),
+                          base_size=float(s.get("bullet_size", 17)))
+
         elif layout == "table":
             if s.get("bullets"):
                 bullets_block(sl, s["bullets"], 0.6, cy+0.05, 4.6, 5.0, base_size=17)
@@ -227,6 +247,40 @@ def build(deck, out_pptx, assets):
                 box_h = 7.13 - box_top  # extend down to just above the footer rule
                 add_figure(sl, figpath(s.get("figure")), 0.3, box_top, 12.73, box_h,
                            s.get("figure_caption"), cap_h=0.3, cap_size=10.5)
+
+        elif layout == "matrix":
+            # case-analysis grid (native shapes, still editable): row/col headers + cells,
+            # cells listed in "dead" render muted (the branch that gets killed).
+            m = s.get("matrix", {})
+            mcols, mrows = m.get("cols", []), m.get("rows", [])
+            mcells = m.get("cells", [])
+            deadset = {tuple(d) for d in m.get("dead", [])}
+            gx, gy, gw = 0.6, cy + 0.05, 12.13
+            lab_w = float(m.get("label_width", 3.4))
+            grid_h = float(m.get("height", 2.9))
+            hh = 0.5
+            cw = (gw - lab_w) / max(len(mcols), 1)
+            rh = (grid_h - hh) / max(len(mrows), 1)
+            for cj, ch in enumerate(mcols):  # NB: do not shadow the outer slide counter `i`
+                tb, tf = textbox(sl, gx + lab_w + cj * cw + 0.1, gy, cw - 0.2, hh, anchor=MSO_ANCHOR.MIDDLE)
+                add_para(tf, ch, 14, GOLDD, bold=True, align=PP_ALIGN.CENTER, first=True, line=1.05)
+            for ri, rhd in enumerate(mrows):
+                top = gy + hh + ri * rh
+                tb, tf = textbox(sl, gx, top + 0.08, lab_w - 0.25, rh - 0.16, anchor=MSO_ANCHOR.MIDDLE)
+                add_para(tf, rhd, 15, NAVY, bold=True, first=True, line=1.06)
+                for cj in range(len(mcols)):
+                    is_dead = (ri, cj) in deadset
+                    rect(sl, gx + lab_w + cj * cw + 0.06, top + 0.06, cw - 0.12, rh - 0.12,
+                         RGBColor(0xEF, 0xF1, 0xF5) if is_dead else GOLDSOFT,
+                         line=RGBColor(0xD7, 0xDE, 0xEA) if is_dead else RGBColor(0xEC, 0xCF, 0x97))
+                    txt = mcells[ri][cj] if ri < len(mcells) and cj < len(mcells[ri]) else ""
+                    tb, tf = textbox(sl, gx + lab_w + cj * cw + 0.24, top + 0.14, cw - 0.48, rh - 0.28,
+                                     anchor=MSO_ANCHOR.MIDDLE)
+                    add_para(tf, txt, 15, MUTED if is_dead else INK, align=PP_ALIGN.CENTER,
+                             first=True, line=1.08, italic=is_dead)
+            if s.get("bullets"):
+                bullets_block(sl, s["bullets"], 0.6, gy + grid_h + 0.22, 12.13,
+                              max(5.05 - grid_h - 0.27, 0.6), base_size=17)
 
         elif layout == "two_column":
             cols = s.get("columns", [[], []])
@@ -243,7 +297,7 @@ def build(deck, out_pptx, assets):
         else:
             bullets_block(sl, s.get("bullets", []), 0.6, cy+0.05, 12.1, 5.1, base_size=20)
 
-        footer(sl, short, i, total)
+        footer(sl, i, total)
         add_notes(sl, notes)
 
     prs.save(out_pptx)

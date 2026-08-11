@@ -33,18 +33,24 @@ Rules: bullets **short** (≤5 per slide, ≤~14 words each); **bold** the key p
 ### deck.json schema
 ```json
 {
-  "meta": {"title","subtitle","authors","affiliation","venue","presenter","date","short_title"},
+  "meta": {"title","subtitle","authors","affiliation","venue","presenter","date"},
   "slides": [
-    { "layout": "title|section|bullets|bullets_figure|figure|table|two_column|takeaways",
+    { "layout": "title|section|bullets|bullets_figure|figure|figure_bullets|table|two_column|matrix|takeaways",
       "title": "…", "kicker": "short label (optional)", "number": "1 (for section)",
       "bullets": ["**bold** then normal text", {"text":"sub point","level":1}],
       "columns": [["left bullets"],["right bullets"]],   // two_column only
       "figure": "figNN or fig_pipeline (stem in assets/)", "figure_caption": "…",
+      "figure_height": 3.0,                              // figure_bullets only (inches)
+      "matrix": {"cols":["A","B"], "rows":["R1","R2"],   // matrix only
+                 "cells":[["…","…"],["…","…"]], "dead":[[0,1],[1,0]],
+                 "height": 2.9, "label_width": 3.4},
       "notes": "speaker notes" }
   ]
 }
 ```
-Layouts: `title` & `section` are full navy slides (use meta / number+title); `bullets`; `bullets_figure` (bullets left, figure right); `figure` (big centered figure); `table` (full-bleed figure, optionally with a few bullets); `two_column`; `takeaways` (gold callout box).
+Layouts: `title` & `section` are full navy slides (use meta / number+title); `bullets`; `bullets_figure` (bullets left, figure right — best for tall figures); `figure` (big centered figure); `figure_bullets` (full-width figure band on top, takeaways under it — use for **wide, short** figures and tables, aspect ratio ≳2, which a full-slide `figure` would squash into a thin strip); `table` (full-bleed figure, optionally with a few bullets); `two_column`; `matrix` (case-analysis grid of native shapes; cells listed in `dead` render muted — good for "which branch survives" logic); `takeaways` (gold callout box).
+
+Footer: a gold hairline plus the page number, bottom-right. No running title.
 
 ## 4. Build + render
 ```
