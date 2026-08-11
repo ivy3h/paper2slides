@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 """Build a 16:9 editable PPTX from a deck.json spec.
 
-Usage: python build_slides.py deck.json medfact_slides.pptx [assets_dir]
+Usage: python build_slides.py deck.json slides.pptx [assets_dir]
 
-deck.json schema (see sample_deck.json):
+deck.json schema (see examples/spurious-rewards.deck.json):
 {
   "meta": {title, authors, affiliation, venue, presenter, date},
   "slides": [ { "layout": <type>, "title":..., "kicker":..., "number":...,
@@ -13,7 +13,7 @@ deck.json schema (see sample_deck.json):
 }
 Layouts: title | section | bullets | bullets_figure | figure | figure_bullets | table |
          two_column | matrix | takeaways
-Bold spans inside text use **markdown** style: "**Over-criticism** hurts precision".
+Bold spans inside text use **markdown** style: "**Random rewards** still gain +21.4".
 House style: no em/en dashes in deck text; use commas, colons or parentheses instead.
 Body text is one size (BODY_SIZE) on every content layout; no title-slide subtitle.
 """

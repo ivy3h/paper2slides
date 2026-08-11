@@ -1,0 +1,319 @@
+{
+  "meta": {
+    "title": "Spurious Rewards: Rethinking Training Signals in RLVR",
+    "authors": "Rulin Shao*, Shuyue Stella Li*, Rui Xin*, Scott Geng*, Yiping Wang, Sewoong Oh, Simon Shaolei Du, Nathan Lambert, Sewon Min, Ranjay Krishna, Yulia Tsvetkov, Hannaneh Hajishirzi, Pang Wei Koh, Luke Zettlemoyer",
+    "affiliation": "University of Washington  ·  Allen Institute for AI  ·  UC Berkeley   (* equal contribution)",
+    "venue": "ICML 2026  ·  PMLR 306  ·  Seoul, South Korea",
+    "presenter": "Ivy",
+    "date": "August 2026"
+  },
+  "slides": [
+    {
+      "layout": "title",
+      "notes": "ICML 2026 camera-ready (PMLR 306); also on arXiv as 2506.10947. This paper asks what the reward in RLVR is actually contributing. The headline claim: on Qwen2.5-Math models, rewards that carry little, no, or even negative information about correctness produce nearly the same MATH-500 gains as ground-truth rewards. The authors then explain the mechanism (GRPO's clipping bias) and show it does not transfer to Llama or OLMo. Note this is an analysis paper, not a proposed training method."
+    },
+    {
+      "layout": "bullets",
+      "kicker": "Motivation",
+      "title": "RLVR works, but what is the reward actually doing?",
+      "bullets": [
+        "**RLVR** is the default recipe for improving LLM math reasoning",
+        "Gains are implicitly credited to **correct, verifiable supervision**",
+        "**Qwen2.5-Math** has become the de facto testbed for open RLVR research",
+        "Yet the **mechanism behind the gains** remains poorly understood",
+        "**Research question:** how much real signal must the reward carry?"
+      ],
+      "notes": "RLVR (RL with verifiable rewards) drives recent reasoning results: DeepSeek-R1, Tulu 3, DeepScaleR. The community assumes the verifier is what teaches the model. This paper stress-tests that assumption by progressively destroying the information content of the reward while holding everything else fixed. A second, sociological motivation: a large fraction of open RLVR papers evaluate only on Qwen2.5-Math-7B."
+    },
+    {
+      "layout": "figure",
+      "kicker": "Headline result",
+      "title": "Spurious rewards nearly match ground truth on Qwen, but not elsewhere",
+      "figure": "fig_headline",
+      "figure_caption": "Figure 1. MATH-500 accuracy after 300 RLVR steps under each training signal (absolute gain over the pre-RL model).",
+      "notes": "Left two groups are Qwen: Qwen2.5-Math-7B starts at 49.4 and gains +29.1 from ground truth but +21.4 from purely random rewards and +24.1 from deliberately incorrect labels. Qwen2.5-7B starts at 41.6 and gains +34.4 (GT) vs +16.4 (random) and +27.8 (incorrect). Right two groups are the control: Llama3.1-8B-Instruct (36.8) and OLMo2-7B (9.0) only gain from informative signals, and spurious rewards actively hurt them (down to -11.5 and -8.3)."
+    },
+    {
+      "layout": "bullets",
+      "kicker": "Method",
+      "title": "A ladder of rewards: standard → weak → spurious",
+      "bullets": [
+        "**Ground truth:** reward verifiably correct answers (supervision upper bound)",
+        "**Majority vote** (weak): pseudo-label each prompt by majority of 64 pre-RL rollouts",
+        "**Format** (weak): reward any non-empty \\boxed{}, ignoring correctness entirely",
+        "**Random** (spurious): reward 1 with probability γ = 0.5, independent of the response",
+        "**Incorrect** (spurious): reward only the majority-voted wrong answer per prompt",
+        {
+          "text": "Everything else (data, model, GRPO hyperparameters) is held constant",
+          "level": 1
+        }
+      ],
+      "notes": "The design is a controlled ablation of reward information. Majority vote removes the labels; format removes correctness; random removes all information; incorrect makes the information negative. Incorrect rewards are deliberately majority-voted wrong answers rather than arbitrary wrong answers, so reward sparsity stays comparable and the labels remain high-probability model outputs. Appendix B shows gamma in {0.001, 0.3, 0.7} behaves similarly, and gamma = 0 gives zero gradients as expected."
+    },
+    {
+      "layout": "bullets",
+      "kicker": "Experimental setup",
+      "title": "GRPO on DeepScaleR, evaluated on standard math benchmarks",
+      "bullets": [
+        "**Algorithm:** GRPO with binary 0/1 rewards; KL and entropy losses disabled (λ = 0)",
+        "**Training data:** DeepScaleR; **10 models** across Qwen2.5, Llama3, OLMo2 families",
+        "**Benchmarks:** MATH-500 (pass@1), AMC and AIME 2024/2025 (avg@8)",
+        "**Hyperparameters:** lr 5e-7, mini-batch 128, rollout batch 64, 16 rollouts/prompt, τ = 1",
+        "**Compute:** ~24 h on 8×A100 per RLVR run; curves reported to 300 steps"
+      ],
+      "notes": "Decoding uses temperature 0 for pass@1 and 0.6 for pass@k. Chat templates: Qwen2.5-Math default for Qwen and instruct models, the OLMo template for other base models. Appendix I documents that Qwen2.5-Math-7B is unusually sensitive to the evaluation prompt, since even a task-irrelevant 'spurious prompt' can give high initial accuracy, which is why the setup is held fixed across rewards."
+    },
+    {
+      "layout": "figure_bullets",
+      "kicker": "Main result · Qwen2.5-Math",
+      "title": "Every reward, even random, lifts Qwen2.5-Math within ~50 steps",
+      "figure": "fig_curves_qwenmath",
+      "figure_height": 3.05,
+      "figure_caption": "Figure 2. MATH-500 (pass@1) and AMC (avg@8) across 300 RLVR steps; smoothed over a window of 10, dotted lines unsmoothed.",
+      "bullets": [
+        "All rewards, including pathological ones, improve within the **first 50 steps**",
+        "**Incorrect labels: +24.1** on MATH-500 vs **+29.1** for ground truth (7B)",
+        "**Random rewards: +21.4** on the 7B, but slower on the 1.5B: **~100 steps**",
+        "Same picture on AMC; AIME24: format **+10.3** vs ground truth **+15.3**"
+      ],
+      "notes": "The one clear exception is spelled out here: Qwen2.5-Math-1.5B gains from random rewards only after ~100 steps, and only +4.9 on AMC. On AIME 2025, written after every model's knowledge cutoff, ground truth has a clear advantage and other rewards give only -0.4 to +4.5. The authors read this as evidence for the 'elicitation, not teaching' hypothesis: at open-source compute scales RLVR mostly triggers latent capabilities rather than installing new ones."
+    },
+    {
+      "layout": "figure",
+      "kicker": "Generalization check",
+      "title": "Spurious rewards rarely help anything that is not Qwen",
+      "figure": "fig_models",
+      "figure_caption": "Figure 3. Varying rewards across eight additional models on MATH-500. Gains on non-Qwen2.5 families are substantially smaller.",
+      "notes": "Two patterns. First, models within a family behave alike: across Qwen2.5, every non-random reward improves MATH-500, while OLMo stays flat under spurious rewards and moves mainly with ground truth. Second, smaller models benefit less from spurious rewards, and the authors conjecture larger models retain more of the pretraining priors these rewards amplify. Llama3.2-3B and Llama3.1-8B barely move at all."
+    },
+    {
+      "layout": "bullets",
+      "kicker": "Analysis · §3",
+      "title": "The practical warning: validate RLVR beyond Qwen",
+      "bullets": [
+        "Every weak or spurious reward **fails to help at least one other model**",
+        "Qwen appears **unusually robust to reward strength**; family behaviour is consistent",
+        "Divergence suggests **pretraining priors, not the reward, shape RL dynamics**",
+        "Re-ran **TTRL and One-Shot RL**: strong on Qwen, often flat elsewhere (App. E)",
+        "Models that already went through **RL post-training gain little** from any reward (App. J)"
+      ],
+      "notes": "This is the paper's methodological contribution. Many recent RLVR papers draw conclusions primarily or exclusively from Qwen results. The authors reproduce two of them, test-time RL (TTRL) and One-Shot RL, and find the same Qwen-only pattern. Their recommendation: report at least one non-Qwen family, and include random and format rewards as dummy baselines to show the proposed signal does more than amplify a prior."
+    },
+    {
+      "layout": "bullets_figure",
+      "kicker": "Mechanism · §4",
+      "title": "Why do random rewards train anything at all? Clipping.",
+      "bullets": [
+        "Careful: the reward is **not** zero-mean, since **E[r] = γ = 0.5**",
+        "**Zero-mean advantage is by construction** in GRPO, equally true of ground truth",
+        "What vanishes is the **expected gradient**, because advantage is **independent** of the rollout",
+        "Each single step is still a **full-size kick**: noise, not smallness",
+        "Rollouts are reused for **8 gradient updates**, so the ratio drifts off 1 and clip fires",
+        "Kill clipping three ways → gains **vanish** (two variants also cut updates 8×)"
+      ],
+      "figure": "fig_clipping",
+      "figure_caption": "Figure 4. Averaged over seeds, Qwen2.5-Math-7B.",
+      "notes": "Precision matters here, because the intuitive story is wrong in three ways. (1) E[r] = gamma = 0.5, not 0. (2) E[advantage] = 0 holds by construction from group-centering, and it is just as true under ground-truth rewards, so it explains nothing on its own. (3) The expected gradient vanishes only because the advantage is independent of the rollout, so it factors out; under ground truth the same expression is nonzero through Cov(advantage, grad log pi), and that covariance IS the learning signal. Setup arithmetic: 64 prompts x 16 rollouts = 1024 rollouts per batch, mini-batch 128, so 8 inner updates per rollout batch; only from the second update does the ratio leave 1. Footnote 3 confirms the last two ablations force pi_theta = pi_old, making clipping inert by construction, but Figure 10's caption also admits they involve 8x fewer gradient updates, so they are not clean single-variable ablations. The implementation-level clip removal keeps 8 updates but has huge seed variance, and Appendix B.2 concedes some seeds still converge high. So 'no clipping means no signal' is weaker than the headline suggests."
+    },
+    {
+      "layout": "matrix",
+      "kicker": "Mechanism · step 1",
+      "title": "Clipping is a sign filter, not a source of signal",
+      "matrix": {
+        "cols": [
+          "Ratio below the band  ( < 1 - ε )",
+          "Ratio above the band  ( > 1 + ε )"
+        ],
+        "rows": [
+          "Advantage > 0  ·  this rollout pushes the token up",
+          "Advantage < 0  ·  this rollout pushes the token down"
+        ],
+        "cells": [
+          [
+            "not clipped → **push up survives**",
+            "clipped → gradient 0"
+          ],
+          [
+            "clipped → gradient 0",
+            "not clipped → **push down survives**"
+          ]
+        ],
+        "dead": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "height": 2.85,
+        "label_width": 3.6
+      },
+      "bullets": [
+        "Inside the band **nothing is clipped**: both signs flow and **cancel**",
+        "So the 0 in Eq. 2 is **cancellation, not suppression**, the usual misreading",
+        "Outside the band one sign survives, but alone that is only a **restoring force**"
+      ],
+      "notes": "This is the step the paper compresses into one line, and it is where the mechanism actually lives. Clipping only bites when the direction the advantage wants to move the token agrees with the direction the ratio has already moved, which is the pessimistic min in PPO. So on each side of the band one sign of advantage is deleted and the other passes through, leaving a residual gradient out of symmetric noise. Two things to stress. First, the band is the only region where nothing is clipped: clip(rho) = rho is the identity there and still carries theta, so the zero is positive and negative advantages cancelling, not gradients being killed. Second, taken alone this is a restoring force: below the band you get pushed up, above it you get pushed down, so pi_theta = pi_old is a stable equilibrium and nothing drifts. The drift needs the next slide."
+    },
+    {
+      "layout": "two_column",
+      "kicker": "Mechanism · step 2  ·  clip threshold 0.2",
+      "title": "The clip band is relative, but the probability ceiling is absolute",
+      "columns": [
+        [
+          "**High-prior token:** behavior-policy probability **0.85**",
+          {
+            "text": "Getting clipped upward needs 0.85 × 1.2 = **1.02**",
+            "level": 1
+          },
+          {
+            "text": "Probabilities cap at 1, so that cell is **unreachable**",
+            "level": 1
+          },
+          "Only **0 or push up** remain, so it can **never be pushed down**",
+          "Every token above **1/(1+ε) ≈ 0.833** is in this regime",
+          "Frequently sampled tokens **drift up for free**"
+        ],
+        [
+          "**Low-prior token:** behavior-policy probability **0.02**",
+          {
+            "text": "The same threshold sits at just **0.024**",
+            "level": 1
+          },
+          {
+            "text": "Only 0.004 of headroom, so it is **clipped constantly**",
+            "level": 1
+          },
+          "All three cells stay live, so **push down dominates**",
+          "The restoring force **loses its downward half** → a ratchet",
+          "Rare tokens are **pushed down by pure noise**"
+        ]
+      ],
+      "notes": "Same 2x2 as the previous slide, now read in absolute probability space. The clip band is relative (plus or minus eps times pi_old) while probabilities are capped at 1, so the upper-clip cell becomes unreachable for any token whose behavior-policy probability exceeds 1/(1+eps), about 0.833 at eps = 0.2. For those tokens the expected-gradient set collapses from {-mu, 0, +mu} to {0, +mu}: never negative, sometimes positive, so it ratchets upward. Rare tokens keep the full set and lose on net. One honest correction if someone challenges it: the high-prior token is not permanently frozen, since it can still enter the below-band case if it drops under 0.68. The claim is only that its negative half is deleted. The effect is also self-reinforcing, since as pi_old rises the ceiling bites harder and softmax normalisation takes the mass from the suppressed tokens. Figure 9(a) is the receipt: average token probability climbs monotonically from 0.85 to about 0.98 with clipping and stays flat without it."
+    },
+    {
+      "layout": "bullets",
+      "kicker": "Mechanism · putting it together",
+      "title": "The full chain, and the link that decides the outcome",
+      "bullets": [
+        "**1.**  Each rollout batch is reused for **8 gradient updates** → the ratio leaves 1",
+        "**2.**  Clipping **filters by sign** → a residual gradient appears out of pure noise",
+        "**3.**  The **ceiling at 1** makes that filter one-sided for high-prior tokens",
+        "**4.**  Probability mass **sharpens onto the model's own prior**, no new ability",
+        "**5.**  Accuracy rises **only if that prior is already correct**, so it is model-dependent",
+        "Links **1 to 4 are universal**; link **5** is where Qwen and Llama part ways"
+      ],
+      "notes": "Links 1 through 4 are universal: they run inside any GRPO implementation that reuses rollouts, on any model, regardless of the reward. Link 5 is the contingent one, and it is the whole reason Qwen and Llama diverge. Sharpening is sign-neutral: it concentrates probability mass, it does not add capability, so whether it shows up as an accuracy gain depends entirely on what sits at the peak being amplified. Appendix B says this outright: the clipping bias is universal, but its impact depends on whether the model's dominant pre-existing behaviors happen to be effective reasoning strategies. Worth flagging as an inference beyond the text: because link 1 is about reusing rollouts for multiple inner updates rather than about the GRPO loss itself, a strictly on-policy single-update setup should not show this effect at all; footnote 3 implies it but the paper never states it. Sections 5 onward are the case study of link 5."
+    },
+    {
+      "layout": "bullets_figure",
+      "kicker": "Case study · §5",
+      "title": "Code reasoning: a strong pre-existing Qwen-Math behavior",
+      "bullets": [
+        "Qwen2.5-Math-7B writes Python in **65.0%** of MATH-500 answers",
+        "It has **no code interpreter**, so the output is autoregressively hallucinated",
+        "Yet code answers are **far more accurate** than natural-language ones",
+        "Other families are **No-Code** (Llama, Qwen2.5-1.5B, OLMo2-7B)…",
+        "…or **Bad-Code** (OLMo2-7B-SFT, Qwen2.5-7B): lots of code, worse accuracy"
+      ],
+      "figure": "fig_codeexample",
+      "figure_caption": "Figure 5. Code reasoning example.",
+      "notes": "The central hypothesis of the paper: differences in RLVR outcomes come from differences in reasoning strategies acquired during pretraining. Some strategies can be amplified cheaply, others are absent. Code reasoning is chosen as a controlled, observable instance, measured simply as whether the response contains the string 'python', not as a complete account of model behavior. Appendix G discusses another such behavior, generation without repetition."
+    },
+    {
+      "layout": "figure_bullets",
+      "kicker": "Evidence · Table 1",
+      "title": "Code helps Qwen-Math and hurts everyone else",
+      "figure": "tab1_codeacc",
+      "figure_height": 2.55,
+      "figure_caption": "Table 1. Fraction of MATH-500 responses containing Python before RL, with accuracy split by response type.",
+      "bullets": [
+        "Qwen2.5-Math-7B: **60.9 with code vs 28.0 without**, a **33-point** gap",
+        {
+          "text": "The table's 35.0 fails the mixture check: 0.65×60.9 + 0.35×35.0 = 51.8, not 49.4",
+          "level": 1
+        },
+        "Qwen2.5-7B and OLMo2-7B-SFT write **more** code (92.2 / 98.0) but do **worse** with it",
+        "Effective code reasoning is a **distinctive Qwen2.5-Math prior**, present before RL",
+        "Qwen2.5-1.5B, OLMo2-7B and both Llama-Instruct models **never generate code**"
+      ],
+      "notes": "This table is the pivot of the argument. It is not that code is intrinsically good; the Bad-Code models show the opposite. It is that Qwen2.5-Math entered RLVR already able to reason in code productively, so any optimizer bias that sharpens its prior lands on a genuinely useful behavior. On the number: the paper quotes the no-code accuracy three ways: 28.0 in the intro, 35.0 in this table, about 29 in Appendix B. A mixture check settles it, since each column should reconstruct the model's base accuracy. It does for the other three: 0.536x52.6 + 0.464x17.2 = 36.2, 0.922x39.9 + 0.078x61.5 = 41.6, 0.98x21.0 + 0.02x40.0 = 21.4, all matching Table 2's Original column exactly. For Qwen2.5-Math-7B only 28.0 closes: 0.65x60.9 + 0.35x28.0 = 49.4, while 35.0 gives 51.8. So the printed 35.0 is the typo and the real gap is 32.9 points, not 25.9. Say this before someone reads it off the slide."
+    },
+    {
+      "layout": "bullets_figure",
+      "kicker": "Evidence · Figure 6",
+      "title": "Spurious rewards buy accuracy by buying code reasoning",
+      "bullets": [
+        "Under weak/spurious rewards code frequency jumps to **~90% within 15 steps**",
+        "It reaches **95.6% for random rewards**, tracking the accuracy curve closely",
+        "With **ground truth**, code frequency rises then **declines** as language reasoning improves",
+        "For **Bad-Code** models, gains instead correlate with **less** code",
+        "**58.3%** of the 7B's gain comes from problems switching **Lang→Code** (App. H)"
+      ],
+      "figure": "fig_codefreq",
+      "figure_caption": "Figure 6. Accuracy (left) and Python-code frequency (right).",
+      "notes": "Panel (a) Qwen2.5-Math-7B: spurious rewards drive both curves up together. Panel (b) Qwen2.5-7B: a Bad-Code model, where the rewards that help (ground truth, majority vote, incorrect) collapse code frequency to near zero, while format and random keep it high and accuracy stays low. Panel (c) OLMo2-7B-SFT shows the same inverse pattern. The divergence of the ground-truth curve in (a) suggests it is teaching something beyond code reliance. Table 3 in Appendix H quantifies the strategy switch: of Qwen2.5-Math-7B's average +23.5 point gain, 58.3% comes from problems that moved from language to code reasoning; 78.7% for Qwen2.5-Math-1.5B. The Bad-Code model Qwen2.5-7B is the mirror image: 93.9% of its gain comes from Code to Lang."
+    },
+    {
+      "layout": "figure_bullets",
+      "kicker": "Intervention · prompting",
+      "title": "Forcing code reasoning reproduces the effect without any RL",
+      "figure": "tab2_codeforce",
+      "figure_height": 3.55,
+      "figure_caption": "Table 2. MATH-500 accuracy when the first generated sentence is forced to be “Let's solve this using Python.”",
+      "bullets": [
+        "Qwen2.5-Math-1.5B **+24.2**, Qwen2.5-Math-7B **+15.0**, Qwen2.5-1.5B **+10.0**",
+        "Llama3.2-3B-Instruct **-28.6**, Llama3.1-8B-Instruct **-21.6**, Qwen2.5-7B **-19.4**",
+        "Sign of the effect is predicted by the **pre-existing code ability** in Table 1"
+      ],
+      "notes": "A pure prompting intervention with no gradient updates recovers a large share of the RLVR gain on models with a code prior, and is destructive on models without one. This is the cleanest causal evidence in the paper that the RLVR gain under spurious rewards is behavior elicitation. Appendix F reports the mirror-image experiment: compound rewards that suppress code reasoning."
+    },
+    {
+      "layout": "bullets_figure",
+      "kicker": "Intervention · RLVR",
+      "title": "A reward for the string “python” behaves like a real reward",
+      "bullets": [
+        "Reward = 1 iff the response **contains the string “python”**, nothing else",
+        "Qwen2.5-Math-7B exceeds **99% code reasoning within 20 steps**",
+        "Accuracy gains appear **primarily in Qwen2.5-Math** models",
+        "RLVR induction **matches or exceeds** the prompting intervention there",
+        "All other families show **limited or negative** movement"
+      ],
+      "figure": "fig_pythonreward",
+      "figure_caption": "Figure 7. Python reward, MATH-500.",
+      "notes": "This closes the loop of the hypothesis: pick any pre-existing behavior that correlates with correctness, reward it directly with a signal that contains zero task information, and you recover RLVR-like gains on the model that already has the behavior. Note the Qwen-Math curves peak early and drift down after ~70 steps, so the elicited gain is not monotone."
+    },
+    {
+      "layout": "takeaways",
+      "kicker": "Paper §7",
+      "title": "Conclusions",
+      "bullets": [
+        "**Reward correctness is not what drove RLVR gains** on Qwen2.5-Math",
+        "**GRPO's clipping term** amplifies high-prior tokens even under pure noise",
+        "Same loss, same sign: ground truth encodes **solution quality**, noise encodes **prior position**",
+        "Gains come from **eliciting pre-existing behaviors**, here code reasoning",
+        "**Pretraining priors decide the outcome**: Qwen ≠ Llama ≠ OLMo",
+        "**Always run random / format reward baselines** and ≥2 model families",
+        "Spurious rewards are a **diagnostic**, never a training recipe"
+      ],
+      "notes": "The three implications the authors state: base model pretraining significantly affects RLVR outcomes; corrupted supervision can still enhance reasoning when it triggers useful existing behavior; and effects on one family may not generalize. For a reading group, the actionable version is the last bullet: a random-reward baseline is nearly free and would have caught several published results."
+    },
+    {
+      "layout": "bullets",
+      "kicker": "Open questions",
+      "title": "Future work",
+      "bullets": [
+        "**Measure pass@k directly**: the elicitation claim is inherited, not tested here",
+        "**Look past code reasoning**: repetition is a second elicitable pattern (App. G)",
+        "**Isolate clipping cleanly**: two of three ablations also cut updates 8× (Fig. 10)",
+        "**Separate prompt from reward**: a LIPSUM prompt alone buys +19.4 (Table 5)",
+        "**Scale up**: does the account hold past 8B parameters and 300 steps?",
+        "**Move beyond math**: every result here is on math benchmarks"
+      ],
+      "notes": "Each of these is a real gap rather than a complaint, and each is a good discussion prompt. On pass@k: the paper never measures it, so the 'elicitation, not capability' framing is inherited from Yue et al. and Liu et al.; running pass@1, @8 and @64 on a random-reward checkpoint against a ground-truth one would settle whether spurious rewards shrink the solution set. On clipping: Figure 10's caption concedes the batch-adjusted variants run 8x fewer gradient updates, and Appendix B.2 concedes the implementation-level variant has huge seed variance with some seeds still converging high, so 'clipping is the only source' is the weakest load-bearing claim in the paper. On prompts: Appendix I Table 5 shows LIPSUM placeholder text moving MATH-500 from 49.4 to 68.8 with zero training, against the 21.4 points that 300 steps of random-reward RLVR buys, which suggests the 49.4 baseline is itself depressed by prompt mismatch. It is not simply format-following either, since the spurious prompt's parsable rate is 84.1%, below Sober's 93.1%. Appendix G's no-repetition reward shows the same Qwen-only pattern, so code reasoning is one instance of a broader family. The Impact Statement's own line still stands: spurious rewards are for controlled analysis, not for training."
+    }
+  ]
+}

@@ -50,7 +50,7 @@ or just ask: *"make reading-group slides from paper.pdf"*. The skill ([skills/pa
 PY=.venv/bin/python
 # 1) parse: PDF path or arXiv id/url -> text + figures + page renders
 $PY scripts/parse_paper.py 1706.03762 work
-# 2) write work/deck.json yourself (see examples/medfact.deck.json and the schema in SKILL.md)
+# 2) write work/deck.json yourself (see examples/spurious-rewards.deck.json and the schema in SKILL.md)
 # 3) build + render
 $PY scripts/build_slides.py work/deck.json work/slides.pptx work/assets
 $PY scripts/render_slides.py work/slides.pptx work/render 120
@@ -65,13 +65,13 @@ scripts/crop.py           crop a vector figure from a page render
 scripts/build_slides.py   deck.json -> editable .pptx (themed, 16:9, speaker notes)
 scripts/render_slides.py  .pptx -> per-slide PNGs (for the visual critique loop)
 skills/paper2slides/SKILL.md   the Claude Code skill (the multi-agent workflow)
-examples/medfact.deck.json     a real deck spec
-examples/medfact_slides.pdf    a rendered deck (PDF)
-examples/preview/*.png         the slides shown above
+examples/spurious-rewards.deck.json   a real 19-slide deck spec
+examples/spurious-rewards_slides.pdf  the rendered result (PDF)
+examples/preview/*.png                the slides shown above
 ```
 
 ## deck.json
-See the schema and layout list in [SKILL.md](skills/paper2slides/SKILL.md) and the worked example in [examples/medfact.deck.json](examples/medfact.deck.json). Customize colors/fonts at the top of `scripts/build_slides.py`.
+See the schema and layout list in [SKILL.md](skills/paper2slides/SKILL.md) and the worked example in [examples/spurious-rewards.deck.json](examples/spurious-rewards.deck.json), a 19-slide deck that exercises every layout except `section`. Its figure assets are not checked in: they come out of `parse_paper.py` and `crop.py` when you run the pipeline yourself. Customize colors/fonts at the top of `scripts/build_slides.py`.
 
 ## License
 MIT
