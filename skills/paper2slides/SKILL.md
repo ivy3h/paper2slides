@@ -27,13 +27,13 @@ Read `W/content.md`; skim `W/pages/*.png`. Pick the few highest-value figures/ta
 
 ## 3. Plan the deck → `W/deck.json`
 Write `W/deck.json` (schema below). Aim for **12 to 15 slides** in a logical talk flow:
-title → motivation/problem → contributions → method (with the pipeline/architecture figure) → data/setup → **main results table on its OWN full slide** (legibility) → analysis/why → key finding(s) → takeaways → (optional) limitations.
-Rules: bullets **short** (≤5 per slide, ≤~14 words each); **bold** the key phrase in each bullet with `**...**`; write 2 to 4 sentence **speaker notes** per slide; set `figure` to an asset stem in `W/assets`. Keep every number faithful to the paper. **Never use an em dash or en dash anywhere in the deck** (titles, kickers, bullets, captions, notes): recast with a comma, colon, semicolon, parentheses, or a second sentence. Hyphens inside compound words and model names are fine, and use `-` for negative numbers.
+title → motivation/problem → contributions → method (with the pipeline/architecture figure) → data/setup → **main results table on its OWN full slide** (legibility) → analysis/why → key finding(s) → **Conclusions** → (optional) **Future work**.
+Rules: bullets **short** (≤5 per slide, ≤~14 words each); **bold** the key phrase in each bullet with `**...**`; write 2 to 4 sentence **speaker notes** per slide; set `figure` to an asset stem in `W/assets`. Keep every number faithful to the paper. **Never use an em dash or en dash anywhere in the deck** (titles, kickers, bullets, captions, notes): recast with a comma, colon, semicolon, parentheses, or a second sentence. Hyphens inside compound words and model names are fine, and use `-` for negative numbers. **No subtitle under the paper title** on the cover, and the title slide carries no one-line summary. Body text is **one size everywhere** (`BODY_SIZE` in build_slides.py); do not vary it per slide. Name the closing slides **Conclusions** and **Future work**: frame what is left open as work to do, not as caveats.
 
 ### deck.json schema
 ```json
 {
-  "meta": {"title","subtitle","authors","affiliation","venue","presenter","date"},
+  "meta": {"title","authors","affiliation","venue","presenter","date"},
   "slides": [
     { "layout": "title|section|bullets|bullets_figure|figure|figure_bullets|table|two_column|matrix|takeaways",
       "title": "…", "kicker": "short label (optional)", "number": "1 (for section)",
@@ -51,6 +51,8 @@ Rules: bullets **short** (≤5 per slide, ≤~14 words each); **bold** the key p
 Layouts: `title` & `section` are full navy slides (use meta / number+title); `bullets`; `bullets_figure` (bullets left, figure right, best for tall figures); `figure` (big centered figure); `figure_bullets` (full-width figure band on top, takeaways under it; use for **wide, short** figures and tables, aspect ratio ≳2, which a full-slide `figure` would squash into a thin strip); `table` (full-bleed figure, optionally with a few bullets); `two_column`; `matrix` (case-analysis grid of native shapes; cells listed in `dead` render muted, good for "which branch survives" logic); `takeaways` (gold callout box).
 
 Footer: a gold hairline plus the page number, bottom-right. No running title.
+
+The `takeaways` callout auto-sizes to its bullet count, so short conclusion lists do not leave a half-empty gold box.
 
 ## 4. Build + render
 ```

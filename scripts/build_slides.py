@@ -5,7 +5,7 @@ Usage: python build_slides.py deck.json medfact_slides.pptx [assets_dir]
 
 deck.json schema (see sample_deck.json):
 {
-  "meta": {title, subtitle, authors, affiliation, venue, presenter, date},
+  "meta": {title, authors, affiliation, venue, presenter, date},
   "slides": [ { "layout": <type>, "title":..., "kicker":..., "number":...,
                 "bullets": [str | {"text":str,"level":0}], "columns": [[..],[..]],
                 "figure": "<manifest id or filename>", "figure_caption": str,
@@ -15,6 +15,7 @@ Layouts: title | section | bullets | bullets_figure | figure | figure_bullets | 
          two_column | matrix | takeaways
 Bold spans inside text use **markdown** style: "**Over-criticism** hurts precision".
 House style: no em/en dashes in deck text; use commas, colons or parentheses instead.
+Body text is one size (BODY_SIZE) on every content layout; no title-slide subtitle.
 """
 import sys, json, os
 from pptx import Presentation
@@ -143,9 +144,11 @@ def hanging(para, indent_in):
     pPr.set("marL", str(int(Inches(indent_in))))
     pPr.set("indent", str(-int(Inches(indent_in))))
 
-def bullets_block(slide, bullets, x, y, w, h, base_size=19):
+BODY_SIZE = 17  # one body size for every content layout, so slides don't jump around
+
+def bullets_block(slide, bullets, x, y, w, h, base_size=BODY_SIZE):
     n = len(bullets)
-    size = base_size if n <= 5 else (17 if n <= 7 else 15)
+    size = base_size if n <= 9 else 15  # only shrink if a slide is unusually dense
     tb, tf = textbox(slide, x, y, w, h)
     first = True
     for b in bullets:
@@ -190,10 +193,10 @@ def build(deck, out_pptx, assets):
             rect(sl, 0, 0, 13.333, 0.16, GOLD)
             tb, tf = textbox(sl, 0.9, 0.5, 11.5, 0.4)
             add_para(tf, (meta.get("venue") or "").upper(), 14, GOLD, bold=True, first=True)
-            tb, tf = textbox(sl, 0.9, 2.0, 11.5, 2.6, anchor=MSO_ANCHOR.TOP)
+            # centred between the venue strip and the gold rule, so 1, 2 or 3 line
+            # titles all sit optically right without a subtitle to pad them out
+            tb, tf = textbox(sl, 0.9, 1.15, 11.5, 3.3, anchor=MSO_ANCHOR.MIDDLE)
             add_para(tf, meta.get("title", ""), 40, WHITE, bold=True, first=True, line=1.03)
-            if meta.get("subtitle"):
-                add_para(tf, meta["subtitle"], 20, RGBColor(0xC8,0xD4,0xEA), space_before=10)
             rect(sl, 0.92, 4.7, 2.2, 0.05, GOLD)
             tb, tf = textbox(sl, 0.9, 4.95, 11.5, 1.6)
             add_para(tf, meta.get("authors", ""), 17, RGBColor(0xDF,0xE7,0xF4), bold=True, first=True)
@@ -220,10 +223,10 @@ def build(deck, out_pptx, assets):
         cy = slide_title(sl, s.get("title",""), s.get("kicker"))
 
         if layout == "bullets":
-            bullets_block(sl, s.get("bullets", []), 0.6, cy+0.05, 12.1, 5.1, base_size=20)
+            bullets_block(sl, s.get("bullets", []), 0.6, cy+0.05, 12.1, 5.1)
 
         elif layout == "bullets_figure":
-            bullets_block(sl, s.get("bullets", []), 0.6, cy+0.05, 6.6, 5.0, base_size=18)
+            bullets_block(sl, s.get("bullets", []), 0.6, cy+0.05, 6.6, 5.0)
             add_figure(sl, figpath(s.get("figure")), 7.45, cy+0.0, 5.3, 5.05, s.get("figure_caption"))
 
         elif layout == "figure":
@@ -237,11 +240,11 @@ def build(deck, out_pptx, assets):
                        s.get("figure_caption"), cap_h=0.32, cap_size=10.5)
             rest = 5.05 - fh - 0.15
             bullets_block(sl, s.get("bullets", []), 0.6, cy + fh + 0.15, 12.13, max(rest, 0.6),
-                          base_size=float(s.get("bullet_size", 17)))
+                          base_size=float(s.get("bullet_size", BODY_SIZE)))
 
         elif layout == "table":
             if s.get("bullets"):
-                bullets_block(sl, s["bullets"], 0.6, cy+0.05, 4.6, 5.0, base_size=17)
+                bullets_block(sl, s["bullets"], 0.6, cy+0.05, 4.6, 5.0)
                 add_figure(sl, figpath(s.get("figure")), 5.4, cy+0.0, 7.4, 5.05, s.get("figure_caption"))
             else:
                 # full-bleed results table: maximize footprint so digits stay legible.
@@ -282,22 +285,28 @@ def build(deck, out_pptx, assets):
                              first=True, line=1.08, italic=is_dead)
             if s.get("bullets"):
                 bullets_block(sl, s["bullets"], 0.6, gy + grid_h + 0.22, 12.13,
-                              max(5.05 - grid_h - 0.27, 0.6), base_size=17)
+                              max(5.05 - grid_h - 0.27, 0.6))
 
         elif layout == "two_column":
             cols = s.get("columns", [[], []])
-            bullets_block(sl, cols[0] if len(cols)>0 else [], 0.6, cy+0.05, 5.9, 5.0, base_size=18)
+            bullets_block(sl, cols[0] if len(cols)>0 else [], 0.6, cy+0.05, 5.9, 5.0)
             rect(sl, 6.66, cy+0.1, 0.012, 4.7, RGBColor(0xD7,0xDE,0xEA))
-            bullets_block(sl, cols[1] if len(cols)>1 else [], 6.95, cy+0.05, 5.8, 5.0, base_size=18)
+            bullets_block(sl, cols[1] if len(cols)>1 else [], 6.95, cy+0.05, 5.8, 5.0)
 
         elif layout == "takeaways":
-            box = rect(sl, 0.6, cy+0.2, 12.13, 4.6, GOLDSOFT)
+            # size the callout to its content so the box hugs the text at any bullet count
+            bl = s.get("bullets", [])
+            def _lines(b):
+                t = (b.get("text", "") if isinstance(b, dict) else str(b)).replace("**", "")
+                return max(1, -(-len(t) // 92))  # ~92 chars per line at BODY_SIZE in this box
+            box_h = min(4.6, max(1.5, 0.60 + sum(_lines(b) for b in bl) * 0.385))
+            box = rect(sl, 0.6, cy+0.2, 12.13, box_h, GOLDSOFT)
             box.line.color.rgb = RGBColor(0xEC,0xCF,0x97); box.line.width = Pt(1)
-            rect(sl, 0.6, cy+0.2, 0.13, 4.6, GOLD)
-            bullets_block(sl, s.get("bullets", []), 1.05, cy+0.45, 11.4, 4.1, base_size=21)
+            rect(sl, 0.6, cy+0.2, 0.13, box_h, GOLD)
+            bullets_block(sl, bl, 1.05, cy+0.45, 11.4, box_h - 0.5)
 
         else:
-            bullets_block(sl, s.get("bullets", []), 0.6, cy+0.05, 12.1, 5.1, base_size=20)
+            bullets_block(sl, s.get("bullets", []), 0.6, cy+0.05, 12.1, 5.1)
 
         footer(sl, i, total)
         add_notes(sl, notes)
