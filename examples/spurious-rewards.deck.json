@@ -255,6 +255,20 @@
       "notes": "Links 1 through 4 are universal: they run inside any GRPO implementation that reuses rollouts, on any model, regardless of the reward. Link 5 is the contingent one, and it is the whole reason Qwen and Llama diverge. Sharpening is sign-neutral: it concentrates probability mass, it does not add capability, so whether it shows up as an accuracy gain depends entirely on what sits at the peak being amplified. Appendix B says this outright: the clipping bias is universal, but its impact depends on whether the model's dominant pre-existing behaviors happen to be effective reasoning strategies. Worth flagging as an inference beyond the text: because link 1 is about reusing rollouts for multiple inner updates rather than about the GRPO loss itself, a strictly on-policy single-update setup should not show this effect at all; footnote 3 implies it but the paper never states it. Sections 5 onward are the case study of link 5."
     },
     {
+      "layout": "bullets",
+      "kicker": "From mechanism to behavior",
+      "title": "If the reward taught nothing, what got amplified?",
+      "bullets": [
+        "Sharpening is **sign-neutral**, so everything rides on **what sits at the peak**",
+        "**Central hypothesis:** RLVR outcomes differ because **pretraining strategies** differ",
+        "Some strategies are **readily amplified**, others are hard to elicit or **absent**",
+        "So Qwen2.5-Math should hold a prior that is **amplifiable and correlated with correctness**",
+        "Llama and OLMo should either **lack one** or hold one that **does not help**",
+        "Next: **code reasoning**, a controlled and observable instance of such a strategy"
+      ],
+      "notes": "This is the hinge of the paper, and it is worth pausing on. Section 4 ended with a mechanism that is completely behavior-agnostic: clipping concentrates probability mass on whatever the model already prefers, and nothing in that story says the result should be more accurate. So the interesting question is no longer how the gradient appears, it is what the gradient lands on. The paper states its hypothesis directly at the start of Section 5: differences in RLVR outcomes stem from differences in the reasoning strategies acquired during pretraining, where some strategies can be readily amplified by RLVR while others are difficult to elicit or absent altogether. That is a falsifiable prediction. It says a model that gains from spurious rewards must already own a behavior that both responds to amplification and happens to be correct more often, and a model that does not gain must be missing one or be sitting on one that hurts. The rest of the paper is the case study testing that, and the authors are explicit that code reasoning is chosen as a controlled and observable example rather than an exhaustive characterisation of model behavior."
+    },
+    {
       "layout": "bullets_figure",
       "kicker": "Case study · §5",
       "title": "Code reasoning: a strong pre-existing Qwen-Math behavior",
