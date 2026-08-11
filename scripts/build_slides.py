@@ -9,6 +9,7 @@ deck.json schema (see examples/spurious-rewards.deck.json):
   "slides": [ { "layout": <type>, "title":..., "kicker":..., "number":...,
                 "bullets": [str | {"text":str,"level":0}], "columns": [[..],[..]],
                 "figure": "<manifest id or filename>", "figure_caption": str,
+                "cite": str | [str],   # source credit, footer-left beside the page number
                 "notes": str } ]
 }
 Layouts: title | section | bullets | bullets_figure | figure | figure_bullets | table |
@@ -92,8 +93,14 @@ def add_para(tf, text, size, color, bold=False, italic=False, align=PP_ALIGN.LEF
 RULE_Y = 7.18          # gold hairline above the footer
 FOOT_Y = RULE_Y + 0.08  # text sits clear of the rule (a 10pt line is ~0.17in tall)
 
-def footer(slide, num, total):
+def footer(slide, num, total, cite=None):
+    """Gold hairline, optional source credit bottom-left, page number bottom-right."""
     rect(slide, 0, RULE_Y, 13.333, 0.022, GOLD)
+    if cite:
+        if isinstance(cite, (list, tuple)):
+            cite = "   ·   ".join(str(c) for c in cite)
+        tb, tf = textbox(slide, 0.55, FOOT_Y, 10.2, 0.24)  # stops short of the page number
+        add_para(tf, str(cite), 10, MUTED, first=True)
     tb, tf = textbox(slide, 11.0, FOOT_Y, 1.78, 0.24)
     add_para(tf, f"{num} / {total}", 10, MUTED, align=PP_ALIGN.RIGHT, first=True)
 
@@ -308,7 +315,7 @@ def build(deck, out_pptx, assets):
         else:
             bullets_block(sl, s.get("bullets", []), 0.6, cy+0.05, 12.1, 5.1)
 
-        footer(sl, i, total)
+        footer(sl, i, total, s.get("cite"))
         add_notes(sl, notes)
 
     prs.save(out_pptx)

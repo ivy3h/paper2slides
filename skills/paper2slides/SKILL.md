@@ -28,7 +28,7 @@ Read `W/content.md`; skim `W/pages/*.png`. Pick the few highest-value figures/ta
 ## 3. Plan the deck → `W/deck.json`
 Write `W/deck.json` (schema below). Aim for **12 to 15 slides** in a logical talk flow:
 title → motivation/problem → contributions → method (with the pipeline/architecture figure) → data/setup → **main results table on its OWN full slide** (legibility) → analysis/why → key finding(s) → **Conclusions** → (optional) **Future work**.
-Rules: bullets **short** (≤5 per slide, ≤~14 words each); **bold** the key phrase in each bullet with `**...**`; write 2 to 4 sentence **speaker notes** per slide; set `figure` to an asset stem in `W/assets`. Keep every number faithful to the paper. **Never use an em dash or en dash anywhere in the deck** (titles, kickers, bullets, captions, notes): recast with a comma, colon, semicolon, parentheses, or a second sentence. Hyphens inside compound words and model names are fine, and use `-` for negative numbers. **No subtitle under the paper title** on the cover, and the title slide carries no one-line summary. Body text is **one size everywhere** (`BODY_SIZE` in build_slides.py); do not vary it per slide. Name the closing slides **Conclusions** and **Future work**: frame what is left open as work to do, not as caveats.
+Rules: bullets **short** (≤5 per slide, ≤~14 words each); **bold** the key phrase in each bullet with `**...**`; write 2 to 4 sentence **speaker notes** per slide; set `figure` to an asset stem in `W/assets`. Keep every number faithful to the paper. **Never use an em dash or en dash anywhere in the deck** (titles, kickers, bullets, captions, notes): recast with a comma, colon, semicolon, parentheses, or a second sentence. Hyphens inside compound words and model names are fine, and use `-` for negative numbers. **No subtitle under the paper title** on the cover, and the title slide carries no one-line summary. Body text is **one size everywhere** (`BODY_SIZE` in build_slides.py); do not vary it per slide. Name the closing slides **Conclusions** and **Future work**: frame what is left open as work to do, not as caveats. **Whenever a slide names an external dataset, method or benchmark** (DeepScaleR, GRPO, MATH-500, a baseline you re-ran), credit it with `cite`, pulling the author and year straight from the paper's bibliography. Keep it to one line, roughly 130 characters, and separate entries with `   ·   `.
 
 ### deck.json schema
 ```json
@@ -40,6 +40,7 @@ Rules: bullets **short** (≤5 per slide, ≤~14 words each); **bold** the key p
       "bullets": ["**bold** then normal text", {"text":"sub point","level":1}],
       "columns": [["left bullets"],["right bullets"]],   // two_column only
       "figure": "figNN or fig_pipeline (stem in assets/)", "figure_caption": "…",
+      "cite": "GRPO: Shao et al. 2024   ·   DeepScaleR: Luo et al. 2025",  // footer credit
       "figure_height": 3.0,                              // figure_bullets only (inches)
       "matrix": {"cols":["A","B"], "rows":["R1","R2"],   // matrix only
                  "cells":[["…","…"],["…","…"]], "dead":[[0,1],[1,0]],
@@ -50,7 +51,7 @@ Rules: bullets **short** (≤5 per slide, ≤~14 words each); **bold** the key p
 ```
 Layouts: `title` & `section` are full navy slides (use meta / number+title); `bullets`; `bullets_figure` (bullets left, figure right, best for tall figures); `figure` (big centered figure); `figure_bullets` (full-width figure band on top, takeaways under it; use for **wide, short** figures and tables, aspect ratio ≳2, which a full-slide `figure` would squash into a thin strip); `table` (full-bleed figure, optionally with a few bullets); `two_column`; `matrix` (case-analysis grid of native shapes; cells listed in `dead` render muted, good for "which branch survives" logic); `takeaways` (gold callout box).
 
-Footer: a gold hairline plus the page number, bottom-right. No running title.
+Footer: a gold hairline, the optional `cite` credit bottom-left, and the page number bottom-right, all on one line. No running title.
 
 The `takeaways` callout auto-sizes to its bullet count, so short conclusion lists do not leave a half-empty gold box.
 
