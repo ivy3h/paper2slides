@@ -69,7 +69,7 @@ def main():
     print(f"pages: {len(doc)} -> {pages_dir}")
     print(f"embedded figures: {len(manifest)} -> {assets_dir}")
     print("text -> content.md ; manifest -> figures.json")
-    print("NOTE: vector diagrams may not extract as embedded images — crop them from pages/page-N.png with crop.py")
+    print("NOTE: vector diagrams may not extract as embedded images; crop them from pages/page-N.png with crop.py")
 
 
 if __name__ == "__main__":

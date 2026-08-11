@@ -1,11 +1,11 @@
 ---
 name: paper2slides
-description: Turn a scientific paper (PDF path or arXiv id/URL) into an editable reading-group slide deck — a .pptx with speaker notes — via a local multi-agent pipeline (parse → plan deck → build → per-slide visual critique → finalize). Use when the user wants to make slides / a talk / a presentation / a deck from a paper.
+description: Turn a scientific paper (PDF path or arXiv id/URL) into an editable reading-group slide deck (a .pptx with speaker notes) via a local multi-agent pipeline (parse → plan deck → build → per-slide visual critique → finalize). Use when the user wants to make slides / a talk / a presentation / a deck from a paper.
 ---
 
 # paper2slides
 
-Convert a paper into a ~12–15 slide reading-group talk as an **editable `.pptx`** (clean navy+gold theme, speaker notes on every slide). Deterministic scripts handle parse/build/render; **you (the agent) do the judgment** — deck planning, figure selection, and visual critique. Final `.pptx` is uploadable to Google Drive / openable in PowerPoint/Keynote.
+Convert a paper into a ~12 to 15 slide reading-group talk as an **editable `.pptx`** (clean navy+gold theme, speaker notes on every slide). Deterministic scripts handle parse/build/render; **you (the agent) do the judgment**: deck planning, figure selection, and visual critique. Final `.pptx` is uploadable to Google Drive / openable in PowerPoint/Keynote.
 
 Let `REPO` = this skill's repo root, `PY` = `$REPO/.venv/bin/python`, `W` = a fresh work dir (e.g. `$REPO/work`).
 
@@ -26,9 +26,9 @@ Read `W/content.md`; skim `W/pages/*.png`. Pick the few highest-value figures/ta
 ```
 
 ## 3. Plan the deck → `W/deck.json`
-Write `W/deck.json` (schema below). Aim for **12–15 slides** in a logical talk flow:
+Write `W/deck.json` (schema below). Aim for **12 to 15 slides** in a logical talk flow:
 title → motivation/problem → contributions → method (with the pipeline/architecture figure) → data/setup → **main results table on its OWN full slide** (legibility) → analysis/why → key finding(s) → takeaways → (optional) limitations.
-Rules: bullets **short** (≤5 per slide, ≤~14 words each); **bold** the key phrase in each bullet with `**...**`; write 2–4 sentence **speaker notes** per slide; set `figure` to an asset stem in `W/assets`. Keep every number faithful to the paper.
+Rules: bullets **short** (≤5 per slide, ≤~14 words each); **bold** the key phrase in each bullet with `**...**`; write 2 to 4 sentence **speaker notes** per slide; set `figure` to an asset stem in `W/assets`. Keep every number faithful to the paper. **Never use an em dash or en dash anywhere in the deck** (titles, kickers, bullets, captions, notes): recast with a comma, colon, semicolon, parentheses, or a second sentence. Hyphens inside compound words and model names are fine, and use `-` for negative numbers.
 
 ### deck.json schema
 ```json
@@ -48,7 +48,7 @@ Rules: bullets **short** (≤5 per slide, ≤~14 words each); **bold** the key p
   ]
 }
 ```
-Layouts: `title` & `section` are full navy slides (use meta / number+title); `bullets`; `bullets_figure` (bullets left, figure right — best for tall figures); `figure` (big centered figure); `figure_bullets` (full-width figure band on top, takeaways under it — use for **wide, short** figures and tables, aspect ratio ≳2, which a full-slide `figure` would squash into a thin strip); `table` (full-bleed figure, optionally with a few bullets); `two_column`; `matrix` (case-analysis grid of native shapes; cells listed in `dead` render muted — good for "which branch survives" logic); `takeaways` (gold callout box).
+Layouts: `title` & `section` are full navy slides (use meta / number+title); `bullets`; `bullets_figure` (bullets left, figure right, best for tall figures); `figure` (big centered figure); `figure_bullets` (full-width figure band on top, takeaways under it; use for **wide, short** figures and tables, aspect ratio ≳2, which a full-slide `figure` would squash into a thin strip); `table` (full-bleed figure, optionally with a few bullets); `two_column`; `matrix` (case-analysis grid of native shapes; cells listed in `dead` render muted, good for "which branch survives" logic); `takeaways` (gold callout box).
 
 Footer: a gold hairline plus the page number, bottom-right. No running title.
 
@@ -59,7 +59,7 @@ Footer: a gold hairline plus the page number, bottom-right. No running title.
 ```
 
 ## 5. Visual critique loop (multi-agent)
-Fan out **one agent per slide** (use the Workflow tool) to read `W/render/slide-N.png` + that slide's `deck.json` entry and return concrete fixes: text overflow / running under the footer, too many or too-long bullets, an illegible table (give it its own full slide or summarize key numbers), bad title wrap, imbalance, missing notes. Then apply fixes to `deck.json`, rebuild, re-render. Repeat until clean (≥2 passes). **Re-verify any tables against the source PDF** — agents sometimes mis-transcribe numbers.
+Fan out **one agent per slide** (use the Workflow tool) to read `W/render/slide-N.png` + that slide's `deck.json` entry and return concrete fixes: text overflow / running under the footer, too many or too-long bullets, an illegible table (give it its own full slide or summarize key numbers), bad title wrap, imbalance, missing notes. Then apply fixes to `deck.json`, rebuild, re-render. Repeat until clean (≥2 passes). **Re-verify any tables against the source PDF**: agents sometimes mis-transcribe numbers.
 
 ## 6. Deliver
 ```

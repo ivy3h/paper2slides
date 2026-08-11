@@ -11,8 +11,10 @@ deck.json schema (see sample_deck.json):
                 "figure": "<manifest id or filename>", "figure_caption": str,
                 "notes": str } ]
 }
-Layouts: title | section | bullets | bullets_figure | figure | table | two_column | takeaways
+Layouts: title | section | bullets | bullets_figure | figure | figure_bullets | table |
+         two_column | matrix | takeaways
 Bold spans inside text use **markdown** style: "**Over-criticism** hurts precision".
+House style: no em/en dashes in deck text; use commas, colons or parentheses instead.
 """
 import sys, json, os
 from pptx import Presentation
@@ -159,9 +161,9 @@ def bullets_block(slide, bullets, x, y, w, h, base_size=19):
             hanging(p, size / 68.0)  # ≈ width of "▪  " at this point size
         else:
             p = tf.add_paragraph(); p.space_after = Pt(4); p.line_spacing = 1.04
-            r = p.add_run(); r.text = "        –  "; r.font.size = Pt(size-2); r.font.color.rgb = MUTED; r.font.name = FONT
+            r = p.add_run(); r.text = "        ·  "; r.font.size = Pt(size-2); r.font.color.rgb = MUTED; r.font.name = FONT
             style_runs(p, text, size-2, INK)
-            hanging(p, (size - 2) / 26.0)  # ≈ width of the indented dash prefix
+            hanging(p, (size - 2) / 26.0)  # ≈ width of the indented sub-bullet prefix
         first = False
     return tb
 

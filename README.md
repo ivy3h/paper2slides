@@ -1,10 +1,10 @@
 # paper2slides
 
-Turn a scientific paper into an **editable reading-group slide deck** — a `.pptx` with speaker notes — using a local multi-agent pipeline (Claude Code). Deterministic Python scripts handle parsing / building / rendering; the agent does the judgment (deck planning, figure selection, and a **visual-in-the-loop critique** where it renders each slide, looks at it, and fixes overflow/legibility/balance).
+Turn a scientific paper into an **editable reading-group slide deck** (a `.pptx` with speaker notes) using a local multi-agent pipeline (Claude Code). Deterministic Python scripts handle parsing / building / rendering; the agent does the judgment (deck planning, figure selection, and a **visual-in-the-loop critique** where it renders each slide, looks at it, and fixes overflow/legibility/balance).
 
 Output is a clean **16:9, navy + gold themed** PPTX, uploadable to Google Drive or editable in PowerPoint / Keynote.
 
-Inspired by [PPTAgent](https://github.com/icip-cas/PPTAgent) and [Paper2Poster](https://github.com/Paper2Poster/Paper2Poster), but lighter: no GPU/model stack — figures are extracted with PyMuPDF and slides are built natively with `python-pptx`.
+Inspired by [PPTAgent](https://github.com/icip-cas/PPTAgent) and [Paper2Poster](https://github.com/Paper2Poster/Paper2Poster), but lighter: no GPU/model stack: figures are extracted with PyMuPDF and slides are built natively with `python-pptx`.
 
 ![example](examples/medfact_slides.pdf)
 
