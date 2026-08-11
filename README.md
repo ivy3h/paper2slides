@@ -4,12 +4,19 @@ Turn a scientific paper into an **editable reading-group slide deck** (a `.pptx`
 
 Output is a clean **16:9, navy + gold themed** PPTX, uploadable to Google Drive or editable in PowerPoint / Keynote.
 
-Inspired by [PPTAgent](https://github.com/icip-cas/PPTAgent) and [Paper2Poster](https://github.com/Paper2Poster/Paper2Poster), but lighter: no GPU/model stack: figures are extracted with PyMuPDF and slides are built natively with `python-pptx`.
+Inspired by [PPTAgent](https://github.com/icip-cas/PPTAgent) and [Paper2Poster](https://github.com/Paper2Poster/Paper2Poster), but lighter: no GPU/model stack, since figures are extracted with PyMuPDF and slides are built natively with `python-pptx`.
 
-![example](examples/medfact_slides.pdf)
+<p align="center">
+  <img src="examples/preview/01-title.png" width="49%" />
+  <img src="examples/preview/02-figure.png" width="49%" />
+  <img src="examples/preview/03-matrix.png" width="49%" />
+  <img src="examples/preview/04-figure-bullets.png" width="49%" />
+</p>
+
+<sub>Four slides from a deck built out of [Spurious Rewards: Rethinking Training Signals in RLVR](https://arxiv.org/abs/2506.10947) (Shao, Li, Xin, Geng et al., ICML 2026), showing the `title`, `figure`, `matrix` and `figure_bullets` layouts. The chart and table are reproduced from that paper.</sub>
 
 ## What you get
-- `medfact-style` deck: title → motivation → contributions → method (with figure) → data → **full results table (own slide)** → analysis → takeaways → limitations
+- A full talk arc: title → motivation → contributions → method (with figure) → data/setup → **main results table on its own slide** → analysis → **Conclusions** → **Future work**
 - Every slide has **speaker notes**
 - Fully editable `.pptx` (native shapes/text, not screenshots)
 
@@ -59,7 +66,8 @@ scripts/build_slides.py   deck.json -> editable .pptx (themed, 16:9, speaker not
 scripts/render_slides.py  .pptx -> per-slide PNGs (for the visual critique loop)
 skills/paper2slides/SKILL.md   the Claude Code skill (the multi-agent workflow)
 examples/medfact.deck.json     a real deck spec
-examples/medfact_slides.pdf    the rendered result
+examples/medfact_slides.pdf    a rendered deck (PDF)
+examples/preview/*.png         the slides shown above
 ```
 
 ## deck.json
