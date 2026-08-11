@@ -24,6 +24,10 @@ Read `W/content.md`; skim `W/pages/*.png`. Pick the few highest-value figures/ta
 ```
 "$PY" "$REPO/scripts/crop.py" "$W/pages/page-3.png" 0.08 0.10 0.95 0.42 "$W/assets/fig_pipeline.png"
 ```
+Once a box is right, **record it in `W/crops.json`** so the deck can be rebuilt from the PDF alone (see `examples/spurious-rewards.crops.json`). Replay or re-cut at another resolution with:
+```
+"$PY" "$REPO/scripts/apply_crops.py" "$W/crops.json" "$W" [dpi]
+```
 
 ## 3. Plan the deck → `W/deck.json`
 Write `W/deck.json` (schema below). Aim for **12 to 15 slides** in a logical talk flow:
@@ -55,11 +59,16 @@ Footer: a gold hairline, the optional `cite` credit bottom-left, and the page nu
 
 The `takeaways` callout auto-sizes to its bullet count, so short conclusion lists do not leave a half-empty gold box.
 
-## 4. Build + render
+## 4. Lint, then build + render
+Check the spec before you render it. Errors are things that render wrong or mislead (a dash, a `[^N]` with no matching reference, a missing figure, a slide with no notes); warnings are worth a look.
+```
+"$PY" "$REPO/scripts/lint_deck.py" "$W/deck.json" "$W/assets"
+```
 ```
 "$PY" "$REPO/scripts/build_slides.py" "$W/deck.json" "$W/slides.pptx" "$W/assets"
 "$PY" "$REPO/scripts/render_slides.py" "$W/slides.pptx" "$W/render" 120
 ```
+`build_slides.py` warns on stderr when a text block needs more room than its box, which is the overflow the critique loop used to catch by eye. If you change anything in `scripts/`, run `"$PY" "$REPO/scripts/selftest.py"`: it builds the shipped example and asserts the things that have broken before.
 
 ## 5. Visual critique loop (multi-agent)
 Fan out **one agent per slide** (use the Workflow tool) to read `W/render/slide-N.png` + that slide's `deck.json` entry and return concrete fixes: text overflow / running under the footer, too many or too-long bullets, an illegible table (give it its own full slide or summarize key numbers), bad title wrap, imbalance, missing notes. Then apply fixes to `deck.json`, rebuild, re-render. Repeat until clean (≥2 passes). **Re-verify any tables against the source PDF**: agents sometimes mis-transcribe numbers.

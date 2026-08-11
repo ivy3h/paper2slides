@@ -61,17 +61,21 @@ soffice --headless --convert-to pdf work/slides.pptx --outdir work
 ## Repo layout
 ```
 scripts/parse_paper.py    PDF/arXiv -> content.md + assets/figNN.png + pages/page-N.png
-scripts/crop.py           crop a vector figure from a page render
+scripts/crop.py           crop a vector figure or equation from a page render
+scripts/apply_crops.py    replay a recorded crops.json, so a deck rebuilds from the PDF alone
+scripts/lint_deck.py      check a deck.json against the house style before building
 scripts/build_slides.py   deck.json -> editable .pptx (themed, 16:9, speaker notes)
 scripts/render_slides.py  .pptx -> per-slide PNGs (for the visual critique loop)
+scripts/selftest.py       build the shipped example and assert it still holds together
 skills/paper2slides/SKILL.md   the Claude Code skill (the multi-agent workflow)
-examples/spurious-rewards.deck.json   a real 19-slide deck spec
+examples/spurious-rewards.deck.json   a real 22-slide deck spec
+examples/spurious-rewards.crops.json  every figure box it uses, replayable
 examples/spurious-rewards_slides.pdf  the rendered result (PDF)
 examples/preview/*.png                the slides shown above
 ```
 
 ## deck.json
-See the schema and layout list in [SKILL.md](skills/paper2slides/SKILL.md) and the worked example in [examples/spurious-rewards.deck.json](examples/spurious-rewards.deck.json), a 19-slide deck that exercises every layout except `section`. Its figure assets are not checked in: they come out of `parse_paper.py` and `crop.py` when you run the pipeline yourself. Customize colors/fonts at the top of `scripts/build_slides.py`.
+See the schema and layout list in [SKILL.md](skills/paper2slides/SKILL.md) and the worked example in [examples/spurious-rewards.deck.json](examples/spurious-rewards.deck.json), a 22-slide deck that exercises every layout except `section`. Its figure assets are not checked in, but they are fully reproducible: `apply_crops.py examples/spurious-rewards.crops.json <workdir>` re-cuts all 11 of them from the arXiv PDF, pixel for pixel. Customize colors/fonts at the top of `scripts/build_slides.py`.
 
 ## License
 MIT

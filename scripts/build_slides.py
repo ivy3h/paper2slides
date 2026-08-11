@@ -117,9 +117,10 @@ def footer(slide, num, total, cite=None):
             # auto-number, so [^1] in the body lands on the first entry here
             cite = "   ·   ".join(f"[^{i}] {c}" for i, c in enumerate(cite, 1))
         cite = str(cite)
-        # 10pt fills the 10.2in slot at ~165 rendered chars; shrink rather than wrap off-slide
+        # shrink rather than wrap off the bottom of the slide
         n = len(SUP_RE.sub("x", cite))
-        size = 10 if n <= 165 else max(7.5, round(10 * 165 / n, 1))
+        fits = chars_per_line(10.2, 10)
+        size = 10 if n <= fits else max(7.5, round(10 * fits / n, 1))
         tb, tf = textbox(slide, 0.55, FOOT_Y, 10.2, 0.24)  # stops short of the page number
         add_para(tf, cite, size, MUTED, first=True)
     tb, tf = textbox(slide, 11.0, FOOT_Y, 1.78, 0.24)
@@ -174,9 +175,38 @@ def hanging(para, indent_in):
 
 BODY_SIZE = 17  # one body size for every content layout, so slides don't jump around
 
-def bullets_block(slide, bullets, x, y, w, h, base_size=BODY_SIZE):
+# Measured on rendered output: Helvetica Neue mixed-case advances ~0.00616 in per
+# point of font size. Everything that needs to guess how much room text takes
+# (bullet overflow, the takeaways box, the footer credit) derives from this one
+# number rather than carrying its own magic constant.
+CHAR_W_PT = 0.00616
+
+def chars_per_line(width_in, size_pt):
+    return max(1, int(width_in / (CHAR_W_PT * size_pt)))
+
+def text_lines(text, width_in, size_pt):
+    text = str(text).replace("**", "")
+    text = SUP_RE.sub("x", text)
+    return max(1, -(-len(text) // chars_per_line(width_in, size_pt)))
+
+def block_height(bullets, width_in, size_pt, pad_pt=9):
+    """Rough height in inches of a bullets_block, matching its spacing."""
+    total = 0.0
+    for b in bullets:
+        text, level = (b.get("text", ""), b.get("level", 0)) if isinstance(b, dict) else (b, 0)
+        sz = size_pt if level == 0 else size_pt - 2
+        indent = 0.6 if level else 0.0
+        total += text_lines(text, width_in - indent, sz) * sz * 1.06 / 72 + pad_pt / 72
+    return total
+
+OVERFLOWS = []  # (where, needed_in, available_in), reported at the end of build()
+
+def bullets_block(slide, bullets, x, y, w, h, base_size=BODY_SIZE, where=None):
     n = len(bullets)
     size = base_size if n <= 9 else 15  # only shrink if a slide is unusually dense
+    need = block_height(bullets, w, size)
+    if need > h + 0.02:
+        OVERFLOWS.append((where or "?", round(need, 2), round(h, 2)))
     tb, tf = textbox(slide, x, y, w, h)
     first = True
     for b in bullets:
@@ -251,10 +281,10 @@ def build(deck, out_pptx, assets):
         cy = slide_title(sl, s.get("title",""), s.get("kicker"))
 
         if layout == "bullets":
-            bullets_block(sl, s.get("bullets", []), 0.6, cy+0.05, 12.1, 5.1)
+            bullets_block(sl, s.get("bullets", []), 0.6, cy+0.05, 12.1, 5.1, where=i)
 
         elif layout == "bullets_figure":
-            bullets_block(sl, s.get("bullets", []), 0.6, cy+0.05, 6.6, 5.0)
+            bullets_block(sl, s.get("bullets", []), 0.6, cy+0.05, 6.6, 5.0, where=i)
             add_figure(sl, figpath(s.get("figure")), 7.45, cy+0.0, 5.3, 5.05, s.get("figure_caption"))
 
         elif layout == "figure":
@@ -268,11 +298,11 @@ def build(deck, out_pptx, assets):
                        s.get("figure_caption"), cap_h=0.32, cap_size=10.5)
             rest = 5.05 - fh - 0.15
             bullets_block(sl, s.get("bullets", []), 0.6, cy + fh + 0.15, 12.13, max(rest, 0.6),
-                          base_size=float(s.get("bullet_size", BODY_SIZE)))
+                          base_size=float(s.get("bullet_size", BODY_SIZE)), where=i)
 
         elif layout == "table":
             if s.get("bullets"):
-                bullets_block(sl, s["bullets"], 0.6, cy+0.05, 4.6, 5.0)
+                bullets_block(sl, s["bullets"], 0.6, cy+0.05, 4.6, 5.0, where=i)
                 add_figure(sl, figpath(s.get("figure")), 5.4, cy+0.0, 7.4, 5.05, s.get("figure_caption"))
             else:
                 # full-bleed results table: maximize footprint so digits stay legible.
@@ -313,34 +343,33 @@ def build(deck, out_pptx, assets):
                              first=True, line=1.08, italic=is_dead)
             if s.get("bullets"):
                 bullets_block(sl, s["bullets"], 0.6, gy + grid_h + 0.22, 12.13,
-                              max(5.05 - grid_h - 0.27, 0.6))
+                              max(5.05 - grid_h - 0.27, 0.6), where=i)
 
         elif layout == "two_column":
             cols = s.get("columns", [[], []])
-            bullets_block(sl, cols[0] if len(cols)>0 else [], 0.6, cy+0.05, 5.9, 5.0)
+            bullets_block(sl, cols[0] if len(cols)>0 else [], 0.6, cy+0.05, 5.9, 5.0, where=i)
             rect(sl, 6.66, cy+0.1, 0.012, 4.7, RGBColor(0xD7,0xDE,0xEA))
-            bullets_block(sl, cols[1] if len(cols)>1 else [], 6.95, cy+0.05, 5.8, 5.0)
+            bullets_block(sl, cols[1] if len(cols)>1 else [], 6.95, cy+0.05, 5.8, 5.0, where=i)
 
         elif layout == "takeaways":
             # size the callout to its content so the box hugs the text at any bullet count
             bl = s.get("bullets", [])
-            def _lines(b):
-                t = (b.get("text", "") if isinstance(b, dict) else str(b)).replace("**", "")
-                return max(1, -(-len(t) // 92))  # ~92 chars per line at BODY_SIZE in this box
-            box_h = min(4.6, max(1.5, 0.60 + sum(_lines(b) for b in bl) * 0.385))
+            box_h = min(4.6, max(1.5, 0.25 + block_height(bl, 11.4, BODY_SIZE) + 0.25))
             box = rect(sl, 0.6, cy+0.2, 12.13, box_h, GOLDSOFT)
             box.line.color.rgb = RGBColor(0xEC,0xCF,0x97); box.line.width = Pt(1)
             rect(sl, 0.6, cy+0.2, 0.13, box_h, GOLD)
-            bullets_block(sl, bl, 1.05, cy+0.45, 11.4, box_h - 0.5)
+            bullets_block(sl, bl, 1.05, cy+0.45, 11.4, box_h - 0.5, where=i)
 
         else:
-            bullets_block(sl, s.get("bullets", []), 0.6, cy+0.05, 12.1, 5.1)
+            bullets_block(sl, s.get("bullets", []), 0.6, cy+0.05, 12.1, 5.1, where=i)
 
         footer(sl, i, total, s.get("cite"))
         add_notes(sl, notes)
 
     prs.save(out_pptx)
     print(f"saved {out_pptx}  ({total} slides)")
+    for where, need, have in OVERFLOWS:
+        print(f"  warning: slide {where} text needs ~{need}in in a {have}in box", file=sys.stderr)
 
 if __name__ == "__main__":
     deck_path = sys.argv[1]
