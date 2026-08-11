@@ -10,6 +10,7 @@ deck.json schema (see examples/spurious-rewards.deck.json):
                 "bullets": [str | {"text":str,"level":0}], "columns": [[..],[..]],
                 "figure": "<manifest id or filename>", "figure_caption": str,
                 "cite": str | [str],   # source credit, footer-left beside the page number
+                                       # a list auto-numbers; mark the body with [^1], [^2], [^1,2]
                 "notes": str } ]
 }
 Layouts: title | section | bullets | bullets_figure | figure | figure_bullets | table |
@@ -18,7 +19,7 @@ Bold spans inside text use **markdown** style: "**Random rewards** still gain +2
 House style: no em/en dashes in deck text; use commas, colons or parentheses instead.
 Body text is one size (BODY_SIZE) on every content layout; no title-slide subtitle.
 """
-import sys, json, os
+import sys, json, os, re
 from pptx import Presentation
 from pptx.util import Inches, Pt, Emu
 from pptx.dml.color import RGBColor
@@ -71,14 +72,29 @@ def textbox(slide, x, y, w, h, anchor=MSO_ANCHOR.TOP):
     tf.margin_left = tf.margin_right = Pt(0); tf.margin_top = tf.margin_bottom = Pt(0)
     return tb, tf
 
+SUP_RE = re.compile(r"\[\^([\d,]+)\]")  # [^1] or [^1,2] -> superscript, tying body text to a footer cite
+
+def _run(para, text, size, color, bold, italic, font, sup=False):
+    r = para.add_run(); r.text = text
+    r.font.size = Pt(size * 0.72 if sup else size); r.font.name = font
+    r.font.bold = bold; r.font.italic = italic
+    r.font.color.rgb = color
+    if sup:
+        r.font._rPr.set("baseline", "30000")  # raise 30%, DrawingML's superscript
+    return r
+
 def style_runs(para, text, size, color, bold=False, italic=False, font=FONT):
-    """Add runs to a paragraph, honoring **bold** spans (bold+navy)."""
+    """Add runs to a paragraph, honoring **bold** spans (bold+navy) and [^N] superscripts."""
     for chunk, is_b in parse_bold(text):
-        r = para.add_run(); r.text = chunk
-        r.font.size = Pt(size); r.font.name = font
-        r.font.bold = bold or is_b
-        r.font.italic = italic
-        r.font.color.rgb = NAVY if (is_b and not bold) else color
+        col = NAVY if (is_b and not bold) else color
+        pos = 0
+        for m in SUP_RE.finditer(chunk):
+            if m.start() > pos:
+                _run(para, chunk[pos:m.start()], size, col, bold or is_b, italic, font)
+            _run(para, m.group(1), size, col, bold or is_b, italic, font, sup=True)
+            pos = m.end()
+        if pos < len(chunk):
+            _run(para, chunk[pos:], size, col, bold or is_b, italic, font)
 
 def add_para(tf, text, size, color, bold=False, italic=False, align=PP_ALIGN.LEFT,
              space_after=6, space_before=0, line=1.04, first=False):
@@ -98,9 +114,14 @@ def footer(slide, num, total, cite=None):
     rect(slide, 0, RULE_Y, 13.333, 0.022, GOLD)
     if cite:
         if isinstance(cite, (list, tuple)):
-            cite = "   ·   ".join(str(c) for c in cite)
+            # auto-number, so [^1] in the body lands on the first entry here
+            cite = "   ·   ".join(f"[^{i}] {c}" for i, c in enumerate(cite, 1))
+        cite = str(cite)
+        # 10pt fills the 10.2in slot at ~165 rendered chars; shrink rather than wrap off-slide
+        n = len(SUP_RE.sub("x", cite))
+        size = 10 if n <= 165 else max(7.5, round(10 * 165 / n, 1))
         tb, tf = textbox(slide, 0.55, FOOT_Y, 10.2, 0.24)  # stops short of the page number
-        add_para(tf, str(cite), 10, MUTED, first=True)
+        add_para(tf, cite, size, MUTED, first=True)
     tb, tf = textbox(slide, 11.0, FOOT_Y, 1.78, 0.24)
     add_para(tf, f"{num} / {total}", 10, MUTED, align=PP_ALIGN.RIGHT, first=True)
 

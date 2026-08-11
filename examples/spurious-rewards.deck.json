@@ -60,15 +60,20 @@
       "kicker": "Experimental setup",
       "title": "GRPO on DeepScaleR, evaluated on standard math benchmarks",
       "bullets": [
-        "**Algorithm:** GRPO with binary 0/1 rewards; KL and entropy losses disabled (λ = 0)",
-        "**Training data:** DeepScaleR (~40K competition math problems, verifiable answers)",
+        "**Algorithm:** GRPO[^1] with binary 0/1 rewards; KL and entropy losses disabled (λ = 0)",
+        "**Training data:** DeepScaleR[^2] (~40K competition math problems, verifiable answers)",
         "**Models:** 10 across the Qwen2.5, Llama3 and OLMo2 families",
-        "**Benchmarks:** MATH-500 (pass@1), AMC and AIME 2024/2025 (avg@8)",
+        "**Benchmarks:** MATH-500[^3] (pass@1), AMC and AIME[^4] 2024/2025 (avg@8)",
         "**Hyperparameters:** lr 5e-7, mini-batch 128, rollout batch 64, 16 rollouts/prompt, τ = 1",
         "**Compute:** ~24 h on 8×A100 per RLVR run; curves reported to 300 steps"
       ],
-      "notes": "DeepScaleR (Luo et al., 2025) is the RL training set released with the DeepScaleR 1.5B project: roughly 40K unique problem and answer pairs pooled from AIME, AMC, Omni-MATH and STILL, all with short verifiable answers, which is what makes a 0/1 verifier reward possible. Note that composition comes from the DeepScaleR release rather than from this paper, which only cites the dataset. Decoding uses temperature 0 for pass@1 and 0.6 for pass@k. Chat templates: Qwen2.5-Math default for Qwen and instruct models, the OLMo template for other base models. Appendix I documents that Qwen2.5-Math-7B is unusually sensitive to the evaluation prompt, since even a task-irrelevant 'spurious prompt' can give high initial accuracy, which is why the setup is held fixed across rewards.",
-      "cite": "GRPO: Shao et al. 2024   ·   DeepScaleR: Luo et al. 2025   ·   MATH-500: Hendrycks et al. 2021   ·   AMC / AIME: Li et al. 2024"
+      "notes": "DeepScaleR (Luo et al., 2025) is the RL training set released with the DeepScaleR 1.5B project: roughly 40K unique problem and answer pairs pooled from AIME, AMC, Omni-MATH and STILL, all with short verifiable answers, which is what makes a 0/1 verifier reward possible. Note that composition comes from the DeepScaleR release rather than from this paper, which only cites the dataset. MATH-500 is the 500 problem subset of MATH selected by Lightman et al. (arXiv:2305.20050), which the paper cites alongside Hendrycks. Decoding uses temperature 0 for pass@1 and 0.6 for pass@k. Chat templates: Qwen2.5-Math default for Qwen and instruct models, the OLMo template for other base models. Appendix I documents that Qwen2.5-Math-7B is unusually sensitive to the evaluation prompt, since even a task-irrelevant 'spurious prompt' can give high initial accuracy, which is why the setup is held fixed across rewards.",
+      "cite": [
+        "GRPO: Shao et al. (arXiv:2402.03300)",
+        "DeepScaleR: Luo et al. (Notion Blog, 2025)",
+        "MATH-500: Hendrycks et al. (arXiv:2103.03874)",
+        "AMC / AIME: Li et al. (NuminaMath, 2024)"
+      ]
     },
     {
       "layout": "figure_bullets",
@@ -101,11 +106,14 @@
         "Every weak or spurious reward **fails to help at least one other model**",
         "Qwen appears **unusually robust to reward strength**; family behaviour is consistent",
         "Divergence suggests **pretraining priors, not the reward, shape RL dynamics**",
-        "Re-ran **TTRL and One-Shot RL**: strong on Qwen, often flat elsewhere (App. E)",
+        "Re-ran **TTRL**[^1] and **One-Shot RL**[^2]: strong on Qwen, often flat elsewhere (App. E)",
         "Models that already went through **RL post-training gain little** from any reward (App. J)"
       ],
       "notes": "This is the paper's methodological contribution. Many recent RLVR papers draw conclusions primarily or exclusively from Qwen results. The authors reproduce two of them, test-time RL (TTRL) and One-Shot RL, and find the same Qwen-only pattern. Their recommendation: report at least one non-Qwen family, and include random and format rewards as dummy baselines to show the proposed signal does more than amplify a prior.",
-      "cite": "TTRL: Zuo et al. 2025   ·   One-Shot RL: Wang et al. 2025"
+      "cite": [
+        "TTRL: Zuo et al. (arXiv:2504.16084)",
+        "One-Shot RL: Wang et al. (arXiv:2504.20571)"
+      ]
     },
     {
       "layout": "bullets_figure",
@@ -314,7 +322,7 @@
       "kicker": "Open questions",
       "title": "Future work",
       "bullets": [
-        "**Measure pass@k directly**: the elicitation claim is inherited, not tested here",
+        "**Measure pass@k directly**: the elicitation claim is inherited[^1,2], not tested here",
         "**Look past code reasoning**: repetition is a second elicitable pattern (App. G)",
         "**Isolate clipping cleanly**: two of three ablations also cut updates 8× (Fig. 10)",
         "**Separate prompt from reward**: a LIPSUM prompt alone buys +19.4 (Table 5)",
@@ -322,7 +330,10 @@
         "**Move beyond math**: every result here is on math benchmarks"
       ],
       "notes": "Each of these is a real gap rather than a complaint, and each is a good discussion prompt. On pass@k: the paper never measures it, so the 'elicitation, not capability' framing is inherited from Yue et al. and Liu et al.; running pass@1, @8 and @64 on a random-reward checkpoint against a ground-truth one would settle whether spurious rewards shrink the solution set. On clipping: Figure 10's caption concedes the batch-adjusted variants run 8x fewer gradient updates, and Appendix B.2 concedes the implementation-level variant has huge seed variance with some seeds still converging high, so 'clipping is the only source' is the weakest load-bearing claim in the paper. On prompts: Appendix I Table 5 shows LIPSUM placeholder text moving MATH-500 from 49.4 to 68.8 with zero training, against the 21.4 points that 300 steps of random-reward RLVR buys, which suggests the 49.4 baseline is itself depressed by prompt mismatch. It is not simply format-following either, since the spurious prompt's parsable rate is 84.1%, below Sober's 93.1%. Appendix G's no-repetition reward shows the same Qwen-only pattern, so code reasoning is one instance of a broader family. The Impact Statement's own line still stands: spurious rewards are for controlled analysis, not for training.",
-      "cite": "Elicitation hypothesis: Yue et al. 2025   ·   Liu et al. 2025"
+      "cite": [
+        "Elicitation hypothesis: Yue et al. (arXiv:2504.13837)",
+        "Liu et al. (arXiv:2503.20783)"
+      ]
     }
   ]
 }
