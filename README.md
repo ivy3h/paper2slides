@@ -27,11 +27,13 @@ System tools (once):
 brew install --cask libreoffice    # provides `soffice` (pptx -> pdf/png)
 brew install poppler               # provides `pdftoppm`
 ```
-Python:
+Python (3.12; a bare `python3` may be an older system Python):
 ```bash
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
+python3.12 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
 ```
+The venv is not relocatable: its console scripts hard-code absolute paths, so if you move the
+repo, delete `.venv` and recreate it.
 
 ## Use it as a Claude Code skill (recommended)
 Drop the skill where Claude Code finds it:
@@ -61,6 +63,7 @@ soffice --headless --convert-to pdf work/slides.pptx --outdir work
 ## Repo layout
 ```
 scripts/parse_paper.py    PDF/arXiv -> content.md + assets/figNN.png + pages/page-N.png
+scripts/find_figures.py   locate figures and tables from their captions, propose crop boxes
 scripts/crop.py           crop a vector figure or equation from a page render
 scripts/apply_crops.py    replay a recorded crops.json, so a deck rebuilds from the PDF alone
 scripts/lint_deck.py      check a deck.json against the house style before building

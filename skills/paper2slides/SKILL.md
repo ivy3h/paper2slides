@@ -20,7 +20,11 @@ Let `REPO` = this skill's repo root, `PY` = `$REPO/.venv/bin/python`, `W` = a fr
 → `W/content.md` (text), `W/pages/page-N.png` (page renders), `W/assets/figNN.png` (embedded figures), `W/figures.json`.
 
 ## 2. Choose figures
-Read `W/content.md`; skim `W/pages/*.png`. Pick the few highest-value figures/tables (architecture/pipeline diagram, main results table, a key plot). Embedded raster figures are already in `W/assets/`. Crop **key equations** the same way you crop figures: a numbered equation the talk leans on (a loss, an estimator, a gradient) is worth a slide of its own, and cropping keeps the paper's own typography instead of trying to retype maths in `python-pptx`. For **vector** figures (diagrams that didn't extract), crop from a page render:
+Let the detector propose boxes first. It works from the captions and the vector paths beside them, so it finds the vector figures and booktabs tables that `parse_paper.py` cannot:
+```
+"$PY" "$REPO/scripts/find_figures.py" <pdf-or-arxiv> "$W" [--pages 2,3,5]
+```
+→ `W/crops_auto.json`. On the paper in `examples/` these average **0.91 IoU** against hand-tuned boxes, so nudge them rather than re-deriving. Then read `W/content.md`, skim `W/pages/*.png`, and pick the few highest-value figures/tables (architecture/pipeline diagram, main results table, a key plot). Embedded raster figures are already in `W/assets/`. Crop **key equations** the same way you crop figures: a numbered equation the talk leans on (a loss, an estimator, a gradient) is worth a slide of its own, and cropping keeps the paper's own typography instead of trying to retype maths in `python-pptx`. For **vector** figures (diagrams that didn't extract), crop from a page render:
 ```
 "$PY" "$REPO/scripts/crop.py" "$W/pages/page-3.png" 0.08 0.10 0.95 0.42 "$W/assets/fig_pipeline.png"
 ```
@@ -71,7 +75,7 @@ Check the spec before you render it. Errors are things that render wrong or misl
 `build_slides.py` warns on stderr when a text block needs more room than its box, which is the overflow the critique loop used to catch by eye. If you change anything in `scripts/`, run `"$PY" "$REPO/scripts/selftest.py"`: it builds the shipped example and asserts the things that have broken before.
 
 ## 5. Visual critique loop (multi-agent)
-Fan out **one agent per slide** (use the Workflow tool) to read `W/render/slide-N.png` + that slide's `deck.json` entry and return concrete fixes: text overflow / running under the footer, too many or too-long bullets, an illegible table (give it its own full slide or summarize key numbers), bad title wrap, imbalance, missing notes. Then apply fixes to `deck.json`, rebuild, re-render. Repeat until clean (≥2 passes). **Re-verify any tables against the source PDF**: agents sometimes mis-transcribe numbers.
+The mechanical failures are caught for you now: `lint_deck.py` covers dashes, dangling citations, missing notes and unresolved figures, and `build_slides.py` warns when a text block will not fit its box. What is left needs judgment, so **read `W/render/slide-N.png` yourself**, slide by slide, looking for: an illegible table (give it its own full slide or summarize the key numbers), a bad title wrap, a figure cropped through an axis label, a sub-bullet that reads as though it belongs to the wrong parent, left/right imbalance. Apply fixes to `deck.json`, rebuild, re-render, go again (≥2 passes). For a very long deck you can fan out one agent per slide with the Workflow tool, but for a normal 15 to 25 slide talk reading them inline is faster and cheaper. **Re-verify any table you retype against the source PDF**: it is the easiest thing to get wrong.
 
 ## 6. Deliver
 ```

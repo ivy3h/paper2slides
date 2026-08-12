@@ -28,20 +28,15 @@ from pptx.enum.shapes import MSO_SHAPE
 from PIL import Image
 
 NAVY  = RGBColor(0x0B, 0x25, 0x45)
-NAVY2 = RGBColor(0x16, 0x33, 0x5F)
 GOLD  = RGBColor(0xE8, 0xA3, 0x3D)
 GOLDD = RGBColor(0xB9, 0x78, 0x1B)
 INK   = RGBColor(0x1A, 0x24, 0x38)
 MUTED = RGBColor(0x5A, 0x66, 0x80)
-LIGHT = RGBColor(0xF4, 0xF7, 0xFC)
 GOLDSOFT = RGBColor(0xFB, 0xF1, 0xDE)
 WHITE = RGBColor(0xFF, 0xFF, 0xFF)
 FONT  = "Helvetica Neue"
 
 SW, SH = Inches(13.333), Inches(7.5)
-
-def _emu_in(x):  # Inches helper accepting float
-    return Inches(x)
 
 def parse_bold(s):
     """Split '**bold** normal' into [(text, is_bold), ...]."""
